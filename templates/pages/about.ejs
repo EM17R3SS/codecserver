@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="ru">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title><%=title%> | Node.js HTTP Server</title>
+        <link rel="stylesheet" href="/css/style.css" />
+    </head>
+    <body>
+        <nav class="navbar">
+            <div class="container">
+                <div class="nav-brand">
+                    <a href="/">NodeJS Server</a>
+                </div>
+                <ul class="nav-menu">
+                    <li><a href="/">Главная</a></li>
+                    <li>
+                        <a href="/about" class="active">О нас</a>
+                    </li>
+                    <li><a href="/contact">Контакты</a></li>
+                    <li><a href="/login">Вход</a></li>
+                </ul>
+            </div>
+        </nav>
+
+        <main class="main">
+            <div class="container">
+                <div class="page-header">
+                    <h1><%=title%></h1>
+                    <p>Узнайте больше о нашей компании</p>
+                </div>
+
+                <div class="about-content">
+                    <div class="company-info">
+                        <h2><%=companyName%></h2>
+                        <p>
+                            Мы - команда энтузиастов, создающих качественные
+                            веб-решения на чистом Node.js. Наш подход
+                            заключается в глубоком понимании технологий и отказе
+                            от излишних зависимостей.
+                        </p>
+
+                        <h3>Наши достижения:</h3>
+                        <ul class="achievements">
+                            <li>
+                                <%=experience%> успешной работы в веб-разработке
+                            </li>
+                            <li><%=projects%> реализованных проектов</li>
+                            <li>100% довольных клиентов</li>
+                            <li>24/7 техническая поддержка</li>
+                        </ul>
+                    </div>
+
+                    <div class="team-section">
+                        <h3>Наша команда</h3>
+                        <div class="team-grid">
+                            <div class="team-member">
+                                <div class="member-avatar"></div>
+                                <h4>EM17R3SS</h4>
+                                <p>Lead Developer</p>
+                            </div>
+                            <div class="team-member">
+                                <div class="member-avatar"></div>
+                                <h4>EM17R3SS</h4>
+                                <p>Backend Developer</p>
+                            </div>
+                            <div class="team-member">
+                                <div class="member-avatar"></div>
+                                <h4>EM17R3SS</h4>
+                                <p>Frontend Developer</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <footer class="footer">
+            <div class="container">
+                <p>&copy; 2026 Node.js HTTP Server. Все права защищены.</p>
+            </div>
+        </footer>
+    </body>
+</html>

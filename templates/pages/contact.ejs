@@ -1,0 +1,145 @@
+<!doctype html>
+<html lang="ru">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title><%=title%> | Node.js HTTP Server</title>
+        <link rel="stylesheet" href="/css/style.css" />
+    </head>
+    <body>
+        <nav class="navbar">
+            <div class="container">
+                <div class="nav-brand">
+                    <a href="/">NodeJS Server</a>
+                </div>
+                <ul class="nav-menu">
+                    <li><a href="/">Главная</a></li>
+                    <li><a href="/about">О нас</a></li>
+                    <li>
+                        <a href="/contact" class="active">Контакты</a>
+                    </li>
+                    <li><a href="/login">Вход</a></li>
+                </ul>
+            </div>
+        </nav>
+
+        <main class="main">
+            <div class="container">
+                <div class="page-header">
+                    <h1><%=title%></h1>
+                    <p>Свяжитесь с нами любым удобным способом</p>
+                </div>
+
+                <div class="contact-grid">
+                    <div class="contact-info">
+                        <div class="info-card">
+                            <div class="info-icon"></div>
+                            <h3>Адрес</h3>
+                            <p>HELL</p>
+                        </div>
+
+                        <div class="info-card">
+                            <div class="info-icon"></div>
+                            <h3>Email</h3>
+                            <p>
+                                <a href="mailto:<%=email%>"><%=email%></a>
+                            </p>
+                            <p>
+                                <a href="mailto:support@example.com"
+                                    >support@example.com</a
+                                >
+                            </p>
+                        </div>
+
+                        <div class="info-card">
+                            <div class="info-icon"></div>
+                            <h3>Телефон</h3>
+                            <p><%=phone%></p>
+                            <p>0101 1010 0000 1111</p>
+                        </div>
+
+                        <div class="info-card">
+                            <div class="info-icon"></div>
+                            <h3>Часы работы</h3>
+                            <p>Пн-Пт: 9:00 - 18:00</p>
+                            <p>Сб-Вс: Выходной</p>
+                        </div>
+                    </div>
+
+                    <div class="contact-form">
+                        <h3>Напишите нам</h3>
+                        <form id="feedbackForm">
+                            <div class="form-group">
+                                <label for="name">Ваше имя</label>
+                                <input
+                                    type="text"
+                                    id="name"
+                                    name="name"
+                                    required
+                                />
+                            </div>
+                            <div class="form-group">
+                                <label for="email">Email</label>
+                                <input
+                                    type="email"
+                                    id="email"
+                                    name="email"
+                                    required
+                                />
+                            </div>
+                            <div class="form-group">
+                                <label for="message">Сообщение</label>
+                                <textarea
+                                    id="message"
+                                    name="message"
+                                    rows="5"
+                                    required
+                                ></textarea>
+                            </div>
+                            <button type="submit" class="btn btn-primary">
+                                Отправить
+                            </button>
+                        </form>
+                        <div id="formMessage" class="form-message"></div>
+                    </div>
+                </div>
+
+                <div class="map">
+                    <h3>Мы на карте</h3>
+                    <div class="map-placeholder">
+                        <p>Kарта здесь</p>
+                        <small>HELL</small>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <footer class="footer">
+            <div class="container">
+                <p>&copy; 2026 Node.js HTTP Server. Все права защищены.</p>
+            </div>
+        </footer>
+
+        <script>
+            document
+                .getElementById('feedbackForm')
+                .addEventListener('submit', async e => {
+                    e.preventDefault();
+                    const formData = {
+                        name: document.getElementById('name').value,
+                        email: document.getElementById('email').value,
+                        message: document.getElementById('message').value,
+                    };
+
+                    const messageDiv = document.getElementById('formMessage');
+                    messageDiv.innerHTML =
+                        '<p class="success">Спасибо! Ваше сообщение отправлено.</p>';
+                    e.target.reset();
+
+                    setTimeout(() => {
+                        messageDiv.innerHTML = '';
+                    }, 3000);
+                });
+        </script>
+    </body>
+</html>

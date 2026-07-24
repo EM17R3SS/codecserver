@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="ru">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title><%=title%> | Node.js HTTP Server</title>
+        <link rel="stylesheet" href="../../css/style.css" />
+    </head>
+    <body>
+        <nav class="navbar">
+            <div class="container">
+                <div class="nav-brand">
+                    <a href="/">NodeJS Server</a>
+                </div>
+                <ul class="nav-menu">
+                    <li>
+                        <a href="/" class="active">Главная</a>
+                    </li>
+                    <li><a href="/about">О нас</a></li>
+                    <li><a href="/contact">Контакты</a></li>
+                    <li><a href="/login">Вход</a></li>
+                </ul>
+            </div>
+        </nav>
+
+        <main class="main">
+            <div class="container">
+                <div class="hero">
+                    <h1><%=title%></h1>
+                    <p class="lead"><%=content%></p>
+                    <a href="/about" class="btn btn-primary">Узнать больше</a>
+                </div>
+
+                <div class="features">
+                    <div class="feature-card">
+                        <div class="feature-icon"></div>
+                        <h3>Высокая производительность</h3>
+                        <p>Сервер на чистом Node.js без внешних зависимостей</p>
+                    </div>
+                    <div class="feature-card">
+                        <div class="feature-icon"></div>
+                        <h3>Профессиональная архитектура</h3>
+                        <p>MVC паттерн, middleware, роутинг</p>
+                    </div>
+                    <div class="feature-card">
+                        <div class="feature-icon"></div>
+                        <h3>REST API</h3>
+                        <p>Полноценное API с поддержкой JSON</p>
+                    </div>
+                    <div class="feature-card">
+                        <div class="feature-icon"></div>
+                        <h3>Безопасность</h3>
+                        <p>Валидация данных и обработка ошибок</p>
+                    </div>
+                </div>
+
+                <div class="tech-stack">
+                    <h2>Технологии</h2>
+                    <div class="tech-badges">
+                        <span class="badge">Node.js</span>
+                        <span class="badge">HTTP модуль</span>
+                        <span class="badge">REST API</span>
+                        <span class="badge">Middleware</span>
+                        <span class="badge">Шаблонизация</span>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <footer class="footer">
+            <div class="container">
+                <p>&copy; 2026 Node.js HTTP Server. Все права защищены.</p>
+                <p>Демонстрационный проект для стажировки</p>
+            </div>
+        </footer>
+    </body>
+</html>

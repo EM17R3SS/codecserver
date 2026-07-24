@@ -1,0 +1,104 @@
+    <!doctype html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Регистрация | Node.js HTTP Server</title>
+    <link rel="stylesheet" href="/css/style.css" />
+</head>
+<body>
+    <nav class="navbar">
+        <div class="container">
+            <div class="nav-brand">
+                <a href="/">NodeJS Server</a>
+            </div>
+            <ul class="nav-menu">
+                <li><a href="/">Главная</a></li>
+                <li><a href="/about">О нас</a></li>
+                <li><a href="/contact">Контакты</a></li>
+                <li><a href="/login">Вход</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <main class="main">
+        <div class="container">
+            <div class="login-wrapper">
+                <div class="login-container">
+                    <div class="login-header">
+                        <h2>Регистрация</h2>
+                        <p>Создайте новый аккаунт</p>
+                    </div>
+
+                    <form id="registerForm" class="login-form">
+                        <div class="form-group">
+                            <label for="name">Имя</label>
+                            <input type="text" id="name" name="name" placeholder="Иван Петров" required />
+                        </div>
+
+                        <div class="form-group">
+                            <label for="email">Email</label>
+                            <input type="email" id="email" name="email" placeholder="example@mail.com" required />
+                        </div>
+
+                        <div class="form-group">
+                            <label for="password">Пароль</label>
+                            <input type="password" id="password" name="password" placeholder="минимум 8 символов" required />
+                        </div>
+
+                        <button type="submit" class="btn btn-primary btn-block">
+                            Зарегистрироваться
+                        </button>
+                    </form>
+
+                    <div id="registerMessage" class="form-message" style="margin-top: 1rem;"></div>
+
+                    <div class="login-footer" style="margin-top: 1rem; text-align: center;">
+                        <p>Уже есть аккаунт? <a href="/login" style="color: #ff0000;">Войти</a></p>
+                        <a href="/">Вернуться на главную</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <footer class="footer">
+        <div class="container">
+            <p>&copy; 2026 Node.js HTTP Server. Все права защищены.</p>
+        </div>
+    </footer>
+
+    <script>
+        document.getElementById('registerForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const name = document.getElementById('name').value;
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            const messageDiv = document.getElementById('registerMessage');
+
+            try {
+                const response = await fetch('/api/v1/auth/register', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name, email, password })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    messageDiv.innerHTML = `
+                        <p style="color: #00ff00;">Регистрация успешна!</p>
+                        <p style="margin-top: 0.5rem;"><a href="/login" style="color: #ff0000;">Перейти к входу</a></p>
+                    `;
+                    document.getElementById('registerForm').reset();
+                } else {
+                    messageDiv.innerHTML = `<p style="color: #ff0000;"> ${data.message}</p>`;
+                }
+            } catch (error) {
+                messageDiv.innerHTML = '<p style="color: #ff0000;"> Ошибка соединения</p>';
+            }
+        });
+    </script>
+</body>
+</html>

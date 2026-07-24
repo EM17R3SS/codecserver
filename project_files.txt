@@ -1,0 +1,3001 @@
+========== ./tests/authTest.js ==========
+const request = require('supertest');
+const app = require('../src/app');
+const User = require('../src/core/models/User');
+
+describe('Auth API', () => {
+    afterEach(async () => {
+        await User.deleteMany({});
+    });
+
+    it('регистрирует нового пользователя и выдаёт JWT', async () => {
+        const res = await request(app).post('/api/v1/auth/register').send({
+            name: 'Test User',
+            email: 'test@example.com',
+            password: 'password123',
+        });
+
+        expect(res.statusCode).toBe(201);
+        expect(res.body.success).toBe(true);
+        expect(res.body.data.token).toBeDefined();
+        expect(res.body.data.user.password).toBeUndefined();
+    });
+
+    it('не даёт зарегистрировать существующий email', async () => {
+        await request(app).post('/api/v1/auth/register').send({
+            name: 'A',
+            email: 'dup@example.com',
+            password: 'password123',
+        });
+
+        const res = await request(app).post('/api/v1/auth/register').send({
+            name: 'B',
+            email: 'dup@example.com',
+            password: 'password123',
+        });
+
+        expect(res.statusCode).toBe(400);
+    });
+
+    it('логинит с правильными данными', async () => {
+        await request(app).post('/api/v1/auth/register').send({
+            name: 'Login',
+            email: 'login@example.com',
+            password: 'password123',
+        });
+
+        const res = await request(app).post('/api/v1/auth/login').send({
+            email: 'login@example.com',
+            password: 'password123',
+        });
+
+        expect(res.statusCode).toBe(200);
+        expect(res.body.data.token).toBeDefined();
+    });
+
+    it('блокирует аккаунт после N неверных попыток', async () => {
+        await request(app).post('/api/v1/auth/register').send({
+            name: 'Lock',
+            email: 'lock@example.com',
+            password: 'password123',
+        });
+
+        for (let i = 0; i < 5; i++) {
+            await request(app).post('/api/v1/auth/login').send({
+                email: 'lock@example.com',
+                password: 'wrong',
+            });
+        }
+
+        const res = await request(app).post('/api/v1/auth/login').send({
+            email: 'lock@example.com',
+            password: 'password123',
+        });
+
+        expect(res.statusCode).toBe(429);
+    });
+});
+
+========== ./tests/setup.js ==========
+const mongoose = require('mongoose');
+const { MongoMemoryServer } = require('mongodb-memory-server');
+
+let mongoServer;
+
+beforeAll(async () => {
+    mongoServer = await MongoMemoryServer.create();
+    await mongoose.connect(mongoServer.getUri());
+});
+
+afterAll(async () => {
+    await mongoose.disconnect();
+    await mongoServer.stop();
+});
+
+========== ./tests/usersTest.js ==========
+const request = require('supertest');
+const app = require('../src/app');
+const User = require('../src/core/models/User');
+const { hashPassword } = require('../src/lib/password');
+const { generateToken } = require('../src/lib/jwt');
+
+describe('Users API — RBAC', () => {
+    let userToken, adminToken, targetUserId;
+
+    beforeEach(async () => {
+        const hashedPassword = await hashPassword('password123');
+
+        const normalUser = await User.create({
+            name: 'Regular',
+            email: 'regular@example.com',
+            password: hashedPassword,
+            role: 'user',
+        });
+
+        const admin = await User.create({
+            name: 'Admin',
+            email: 'admin@example.com',
+            password: hashedPassword,
+            role: 'admin',
+        });
+
+        const target = await User.create({
+            name: 'ToDelete',
+            email: 'target@example.com',
+            password: hashedPassword,
+            role: 'user',
+        });
+
+        targetUserId = target._id.toString();
+        userToken = generateToken({
+            id: normalUser._id,
+            email: normalUser.email,
+            role: 'user',
+        });
+        adminToken = generateToken({
+            id: admin._id,
+            email: admin.email,
+            role: 'admin',
+        });
+    });
+
+    afterEach(async () => {
+        await User.deleteMany({});
+    });
+
+    it('обычный user МОЖЕТ просматривать список пользователей', async () => {
+        const res = await request(app)
+            .get('/api/v1/users')
+            .set('Authorization', `Bearer ${userToken}`);
+
+        expect(res.statusCode).toBe(200);
+        expect(res.body.success).toBe(true);
+    });
+
+    it('обычный user НЕ МОЖЕТ удалить пользователя (403)', async () => {
+        const res = await request(app)
+            .delete(`/api/v1/users/${targetUserId}`)
+            .set('Authorization', `Bearer ${userToken}`);
+
+        expect(res.statusCode).toBe(403);
+    });
+
+    it('admin МОЖЕТ удалить пользователя', async () => {
+        const res = await request(app)
+            .delete(`/api/v1/users/${targetUserId}`)
+            .set('Authorization', `Bearer ${adminToken}`);
+
+        expect(res.statusCode).toBe(200);
+
+        const deleted = await User.findById(targetUserId);
+        expect(deleted).toBeNull();
+    });
+
+    it('запрос без токена отклоняется (401)', async () => {
+        const res = await request(app).get('/api/v1/users');
+        expect(res.statusCode).toBe(401);
+    });
+});
+
+========== ./.prettierrc ==========
+{
+    "tabWidth": 4,
+    "useTabs": false,
+    "semi": true,
+    "singleQuote": true,
+    "trailingComma": "es5",
+    "bracketSpacing": true,
+    "arrowParens": "avoid",
+    "printWidth": 80
+}
+
+========== ./postman_collection.json ==========
+{
+    "info": {
+        "name": "MyApp API",
+        "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+    },
+    "variable": [
+        { "key": "baseUrl", "value": "http://localhost:3000/api/v1" },
+        { "key": "token", "value": "" },
+        { "key": "adminToken", "value": "" },
+        { "key": "userId", "value": "" }
+    ],
+    "item": [
+        {
+            "name": "Auth",
+            "item": [
+                {
+                    "name": "Register",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\"name\":\"Ivan\",\"email\":\"ivan@example.com\",\"password\":\"password123\"}"
+                        },
+                        "url": "{{baseUrl}}/auth/register"
+                    }
+                },
+                {
+                    "name": "Login",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "const data = pm.response.json();",
+                                    "pm.collectionVariables.set('token', data.data.token);"
+                                ]
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\"email\":\"ivan@example.com\",\"password\":\"password123\"}"
+                        },
+                        "url": "{{baseUrl}}/auth/login"
+                    }
+                }
+            ]
+        },
+        {
+            "name": "Users",
+            "item": [
+                {
+                    "name": "Get Users (any role)",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{token}}"
+                            }
+                        ],
+                        "url": "{{baseUrl}}/users"
+                    }
+                },
+                {
+                    "name": "Delete User (admin only, 403 for user)",
+                    "request": {
+                        "method": "DELETE",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{token}}"
+                            }
+                        ],
+                        "url": "{{baseUrl}}/users/{{userId}}"
+                    }
+                }
+            ]
+        }
+    ]
+}
+
+========== ./jest.config.js ==========
+module.exports = {
+    testEnvironment: 'node',
+    testMatch: ['**/tests/**/*Test.js'],
+    setupFilesAfterEnv: ['./tests/setup.js'],
+    testTimeout: 20000,
+};
+
+========== ./templates/pages/about.ejs ==========
+<!doctype html>
+<html lang="ru">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title><%=title%> | Node.js HTTP Server</title>
+        <link rel="stylesheet" href="/css/style.css" />
+    </head>
+    <body>
+        <nav class="navbar">
+            <div class="container">
+                <div class="nav-brand">
+                    <a href="/">NodeJS Server</a>
+                </div>
+                <ul class="nav-menu">
+                    <li><a href="/">Главная</a></li>
+                    <li>
+                        <a href="/about" class="active">О нас</a>
+                    </li>
+                    <li><a href="/contact">Контакты</a></li>
+                    <li><a href="/login">Вход</a></li>
+                </ul>
+            </div>
+        </nav>
+
+        <main class="main">
+            <div class="container">
+                <div class="page-header">
+                    <h1><%=title%></h1>
+                    <p>Узнайте больше о нашей компании</p>
+                </div>
+
+                <div class="about-content">
+                    <div class="company-info">
+                        <h2><%=companyName%></h2>
+                        <p>
+                            Мы - команда энтузиастов, создающих качественные
+                            веб-решения на чистом Node.js. Наш подход
+                            заключается в глубоком понимании технологий и отказе
+                            от излишних зависимостей.
+                        </p>
+
+                        <h3>Наши достижения:</h3>
+                        <ul class="achievements">
+                            <li>
+                                <%=experience%> успешной работы в веб-разработке
+                            </li>
+                            <li><%=projects%> реализованных проектов</li>
+                            <li>100% довольных клиентов</li>
+                            <li>24/7 техническая поддержка</li>
+                        </ul>
+                    </div>
+
+                    <div class="team-section">
+                        <h3>Наша команда</h3>
+                        <div class="team-grid">
+                            <div class="team-member">
+                                <div class="member-avatar"></div>
+                                <h4>EM17R3SS</h4>
+                                <p>Lead Developer</p>
+                            </div>
+                            <div class="team-member">
+                                <div class="member-avatar"></div>
+                                <h4>EM17R3SS</h4>
+                                <p>Backend Developer</p>
+                            </div>
+                            <div class="team-member">
+                                <div class="member-avatar"></div>
+                                <h4>EM17R3SS</h4>
+                                <p>Frontend Developer</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <footer class="footer">
+            <div class="container">
+                <p>&copy; 2026 Node.js HTTP Server. Все права защищены.</p>
+            </div>
+        </footer>
+    </body>
+</html>
+
+========== ./templates/pages/home.ejs ==========
+<!doctype html>
+<html lang="ru">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title><%=title%> | Node.js HTTP Server</title>
+        <link rel="stylesheet" href="../../css/style.css" />
+    </head>
+    <body>
+        <nav class="navbar">
+            <div class="container">
+                <div class="nav-brand">
+                    <a href="/">NodeJS Server</a>
+                </div>
+                <ul class="nav-menu">
+                    <li>
+                        <a href="/" class="active">Главная</a>
+                    </li>
+                    <li><a href="/about">О нас</a></li>
+                    <li><a href="/contact">Контакты</a></li>
+                    <li><a href="/login">Вход</a></li>
+                </ul>
+            </div>
+        </nav>
+
+        <main class="main">
+            <div class="container">
+                <div class="hero">
+                    <h1><%=title%></h1>
+                    <p class="lead"><%=content%></p>
+                    <a href="/about" class="btn btn-primary">Узнать больше</a>
+                </div>
+
+                <div class="features">
+                    <div class="feature-card">
+                        <div class="feature-icon"></div>
+                        <h3>Высокая производительность</h3>
+                        <p>Сервер на чистом Node.js без внешних зависимостей</p>
+                    </div>
+                    <div class="feature-card">
+                        <div class="feature-icon"></div>
+                        <h3>Профессиональная архитектура</h3>
+                        <p>MVC паттерн, middleware, роутинг</p>
+                    </div>
+                    <div class="feature-card">
+                        <div class="feature-icon"></div>
+                        <h3>REST API</h3>
+                        <p>Полноценное API с поддержкой JSON</p>
+                    </div>
+                    <div class="feature-card">
+                        <div class="feature-icon"></div>
+                        <h3>Безопасность</h3>
+                        <p>Валидация данных и обработка ошибок</p>
+                    </div>
+                </div>
+
+                <div class="tech-stack">
+                    <h2>Технологии</h2>
+                    <div class="tech-badges">
+                        <span class="badge">Node.js</span>
+                        <span class="badge">HTTP модуль</span>
+                        <span class="badge">REST API</span>
+                        <span class="badge">Middleware</span>
+                        <span class="badge">Шаблонизация</span>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <footer class="footer">
+            <div class="container">
+                <p>&copy; 2026 Node.js HTTP Server. Все права защищены.</p>
+                <p>Демонстрационный проект для стажировки</p>
+            </div>
+        </footer>
+    </body>
+</html>
+
+========== ./templates/pages/contact.ejs ==========
+<!doctype html>
+<html lang="ru">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title><%=title%> | Node.js HTTP Server</title>
+        <link rel="stylesheet" href="/css/style.css" />
+    </head>
+    <body>
+        <nav class="navbar">
+            <div class="container">
+                <div class="nav-brand">
+                    <a href="/">NodeJS Server</a>
+                </div>
+                <ul class="nav-menu">
+                    <li><a href="/">Главная</a></li>
+                    <li><a href="/about">О нас</a></li>
+                    <li>
+                        <a href="/contact" class="active">Контакты</a>
+                    </li>
+                    <li><a href="/login">Вход</a></li>
+                </ul>
+            </div>
+        </nav>
+
+        <main class="main">
+            <div class="container">
+                <div class="page-header">
+                    <h1><%=title%></h1>
+                    <p>Свяжитесь с нами любым удобным способом</p>
+                </div>
+
+                <div class="contact-grid">
+                    <div class="contact-info">
+                        <div class="info-card">
+                            <div class="info-icon"></div>
+                            <h3>Адрес</h3>
+                            <p>HELL</p>
+                        </div>
+
+                        <div class="info-card">
+                            <div class="info-icon"></div>
+                            <h3>Email</h3>
+                            <p>
+                                <a href="mailto:<%=email%>"><%=email%></a>
+                            </p>
+                            <p>
+                                <a href="mailto:support@example.com"
+                                    >support@example.com</a
+                                >
+                            </p>
+                        </div>
+
+                        <div class="info-card">
+                            <div class="info-icon"></div>
+                            <h3>Телефон</h3>
+                            <p><%=phone%></p>
+                            <p>0101 1010 0000 1111</p>
+                        </div>
+
+                        <div class="info-card">
+                            <div class="info-icon"></div>
+                            <h3>Часы работы</h3>
+                            <p>Пн-Пт: 9:00 - 18:00</p>
+                            <p>Сб-Вс: Выходной</p>
+                        </div>
+                    </div>
+
+                    <div class="contact-form">
+                        <h3>Напишите нам</h3>
+                        <form id="feedbackForm">
+                            <div class="form-group">
+                                <label for="name">Ваше имя</label>
+                                <input
+                                    type="text"
+                                    id="name"
+                                    name="name"
+                                    required
+                                />
+                            </div>
+                            <div class="form-group">
+                                <label for="email">Email</label>
+                                <input
+                                    type="email"
+                                    id="email"
+                                    name="email"
+                                    required
+                                />
+                            </div>
+                            <div class="form-group">
+                                <label for="message">Сообщение</label>
+                                <textarea
+                                    id="message"
+                                    name="message"
+                                    rows="5"
+                                    required
+                                ></textarea>
+                            </div>
+                            <button type="submit" class="btn btn-primary">
+                                Отправить
+                            </button>
+                        </form>
+                        <div id="formMessage" class="form-message"></div>
+                    </div>
+                </div>
+
+                <div class="map">
+                    <h3>Мы на карте</h3>
+                    <div class="map-placeholder">
+                        <p>Kарта здесь</p>
+                        <small>HELL</small>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <footer class="footer">
+            <div class="container">
+                <p>&copy; 2026 Node.js HTTP Server. Все права защищены.</p>
+            </div>
+        </footer>
+
+        <script>
+            document
+                .getElementById('feedbackForm')
+                .addEventListener('submit', async e => {
+                    e.preventDefault();
+                    const formData = {
+                        name: document.getElementById('name').value,
+                        email: document.getElementById('email').value,
+                        message: document.getElementById('message').value,
+                    };
+
+                    const messageDiv = document.getElementById('formMessage');
+                    messageDiv.innerHTML =
+                        '<p class="success">Спасибо! Ваше сообщение отправлено.</p>';
+                    e.target.reset();
+
+                    setTimeout(() => {
+                        messageDiv.innerHTML = '';
+                    }, 3000);
+                });
+        </script>
+    </body>
+</html>
+
+========== ./templates/pages/register.ejs ==========
+    <!doctype html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Регистрация | Node.js HTTP Server</title>
+    <link rel="stylesheet" href="/css/style.css" />
+</head>
+<body>
+    <nav class="navbar">
+        <div class="container">
+            <div class="nav-brand">
+                <a href="/">NodeJS Server</a>
+            </div>
+            <ul class="nav-menu">
+                <li><a href="/">Главная</a></li>
+                <li><a href="/about">О нас</a></li>
+                <li><a href="/contact">Контакты</a></li>
+                <li><a href="/login">Вход</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <main class="main">
+        <div class="container">
+            <div class="login-wrapper">
+                <div class="login-container">
+                    <div class="login-header">
+                        <h2>Регистрация</h2>
+                        <p>Создайте новый аккаунт</p>
+                    </div>
+
+                    <form id="registerForm" class="login-form">
+                        <div class="form-group">
+                            <label for="name">Имя</label>
+                            <input type="text" id="name" name="name" placeholder="Иван Петров" required />
+                        </div>
+
+                        <div class="form-group">
+                            <label for="email">Email</label>
+                            <input type="email" id="email" name="email" placeholder="example@mail.com" required />
+                        </div>
+
+                        <div class="form-group">
+                            <label for="password">Пароль</label>
+                            <input type="password" id="password" name="password" placeholder="минимум 8 символов" required />
+                        </div>
+
+                        <button type="submit" class="btn btn-primary btn-block">
+                            Зарегистрироваться
+                        </button>
+                    </form>
+
+                    <div id="registerMessage" class="form-message" style="margin-top: 1rem;"></div>
+
+                    <div class="login-footer" style="margin-top: 1rem; text-align: center;">
+                        <p>Уже есть аккаунт? <a href="/login" style="color: #ff0000;">Войти</a></p>
+                        <a href="/">Вернуться на главную</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <footer class="footer">
+        <div class="container">
+            <p>&copy; 2026 Node.js HTTP Server. Все права защищены.</p>
+        </div>
+    </footer>
+
+    <script>
+        document.getElementById('registerForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const name = document.getElementById('name').value;
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            const messageDiv = document.getElementById('registerMessage');
+
+            try {
+                const response = await fetch('/api/v1/auth/register', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name, email, password })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    messageDiv.innerHTML = `
+                        <p style="color: #00ff00;">Регистрация успешна!</p>
+                        <p style="margin-top: 0.5rem;"><a href="/login" style="color: #ff0000;">Перейти к входу</a></p>
+                    `;
+                    document.getElementById('registerForm').reset();
+                } else {
+                    messageDiv.innerHTML = `<p style="color: #ff0000;"> ${data.message}</p>`;
+                }
+            } catch (error) {
+                messageDiv.innerHTML = '<p style="color: #ff0000;"> Ошибка соединения</p>';
+            }
+        });
+    </script>
+</body>
+</html>
+
+========== ./templates/pages/userList.ejs ==========
+<!doctype html>
+<html lang="ru">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Управление пользователями | Node.js HTTP Server</title>
+        <link rel="stylesheet" href="/css/style.css" />
+    </head>
+    <body>
+        <nav class="navbar">
+            <div class="container">
+                <div class="nav-brand">
+                    <a href="/">NodeJS Server</a>
+                </div>
+                <ul class="nav-menu">
+                    <li><a href="/">Главная</a></li>
+                    <li><a href="/about">О нас</a></li>
+                    <li><a href="/contact">Контакты</a></li>
+                    <li><a href="/login">Вход</a></li>
+                </ul>
+            </div>
+        </nav>
+
+        <main class="main">
+            <div class="container">
+                <div class="page-header">
+                    <h1>Управление пользователями</h1>
+                    <p>
+                        Всего пользователей:
+                        <span id="userCount"><%=userCount%></span>
+                    </p>
+                    <div class="header-actions">
+                        <a
+                            href="/api/users?format=json"
+                            class="btn btn-secondary"
+                            target="_blank"
+                            >Получить JSON</a
+                        >
+                        <button
+                            onclick="refreshUsers()"
+                            class="btn btn-secondary"
+                        >
+                            Обновить
+                        </button>
+                    </div>
+                </div>
+
+                <div class="users-section">
+                    <div class="users-table-container">
+                        <table class="users-table">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Имя</th>
+                                    <th>Email</th>
+                                    <th>Дата регистрации</th>
+                                    <th>Действия</th>
+                                </tr>
+                            </thead>
+                            <tbody id="usersBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <footer class="footer">
+            <div class="container">
+                <p>&copy; 2026 Node.js HTTP Server. Все права защищены.</p>
+            </div>
+        </footer>
+
+        <script src="/js/main.js"></script>
+    </body>
+</html>
+
+========== ./templates/pages/login.ejs ==========
+<form id="loginForm" class="login-form">
+    <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
+    <div class="form-group">
+        <label for="email">Email</label>
+        <input type="email" id="email" name="email" required />
+    </div>
+    <div class="form-group">
+        <label for="password">Пароль</label>
+        <input type="password" id="password" name="password" required />
+    </div>
+    <button type="submit" class="btn btn-primary btn-block">Войти</button>
+</form>
+<div id="loginMessage" class="form-message"></div>
+
+<script>
+    document.getElementById('loginForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const email = document.getElementById('email').value;
+        const password = document.getElementById('password').value;
+        const csrfToken = document.querySelector('input[name="_csrf"]').value;
+        const messageDiv = document.getElementById('loginMessage');
+
+        try {
+            // Сессионный вход (используется cookie, защищён CSRF-токеном)
+            const response = await fetch('/api/v1/auth/session-login', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'x-csrf-token': csrfToken,
+                },
+                credentials: 'include',
+                body: JSON.stringify({ email, password, _csrf: csrfToken }),
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+                messageDiv.textContent = 'Вход выполнен! Перенаправление...';
+                messageDiv.style.color = '#00ff00';
+                setTimeout(() => (window.location.href = '/'), 800);
+            } else {
+                messageDiv.textContent = data.message;
+                messageDiv.style.color = '#ff0000';
+            }
+        } catch (err) {
+            messageDiv.textContent = 'Ошибка соединения';
+            messageDiv.style.color = '#ff0000';
+        }
+    });
+</script>
+
+========== ./package.json ==========
+{
+    "name": "my-http-server",
+    "version": "1.0.0",
+    "description": "Node.js/Express demo server with full auth, RBAC and security",
+    "main": "src/index.js",
+    "scripts": {
+        "start": "node src/index.js",
+        "dev": "nodemon src/index.js",
+        "seed": "node scripts/seed.js",
+        "test": "jest --runInBand --detectOpenHandles",
+        "test:watch": "jest --watch",
+        "lint": "eslint src --ext .js",
+        "format": "prettier --write ."
+    },
+    "license": "ISC",
+    "dependencies": {
+        "bcrypt": "^5.1.1",
+        "connect-mongo": "^5.1.0",
+        "cookie-parser": "^1.4.6",
+        "cors": "^2.8.5",
+        "dotenv": "^16.4.5",
+        "ejs": "^3.1.10",
+        "express": "^4.21.0",
+        "express-mongo-sanitize": "^2.2.0",
+        "express-rate-limit": "^7.4.0",
+        "express-session": "^1.18.0",
+        "helmet": "^7.1.0",
+        "hpp": "^0.2.3",
+        "joi": "^17.13.3",
+        "jsonwebtoken": "^9.0.2",
+        "mongoose": "^8.7.0",
+        "passport": "^0.7.0",
+        "passport-google-oauth20": "^2.0.0",
+        "passport-jwt": "^4.0.1",
+        "passport-local": "^1.0.0",
+        "winston": "^3.14.2",
+        "xss": "^1.0.15"
+    },
+    "devDependencies": {
+        "eslint": "^9.11.0",
+        "jest": "^29.7.0",
+        "mongodb-memory-server": "^10.0.1",
+        "nodemon": "^3.1.7",
+        "prettier": "^3.3.3",
+        "supertest": "^7.0.0"
+    }
+}
+
+========== ./scripts/seed.js ==========
+const mongoose = require('mongoose');
+const path = require('path');
+require('dotenv').config({ path: path.join(__dirname, '../.env') });
+
+const User = require('../src/core/models/User');
+const { hashPassword } = require('../src/lib/password');
+
+async function seed() {
+    try {
+        const MONGO_URI =
+            process.env.MONGO_URI || 'mongodb://127.0.0.1:27017/myapp';
+        console.log(`Подключение к MongoDB: ${MONGO_URI}`);
+
+        await mongoose.connect(MONGO_URI);
+        console.log('Подключение к БД...');
+
+        await User.deleteMany({});
+        console.log('База очищена');
+
+        const adminPassword = await hashPassword('admin123');
+        const admin = await User.create({
+            name: 'Admin',
+            email: 'admin@example.com',
+            password: adminPassword,
+            role: 'admin',
+        });
+        console.log('Админ создан:', admin.email);
+
+        const users = [
+            { name: 'Иван Петров', email: 'ivan@example.com' },
+            { name: 'Мария Смирнова', email: 'maria@example.com' },
+            { name: 'Алексей Новиков', email: 'alex@example.com' },
+        ];
+
+        for (const user of users) {
+            const hashedPassword = await hashPassword('password123');
+            await User.create({
+                ...user,
+                password: hashedPassword,
+            });
+        }
+        console.log('Тестовые пользователи созданы');
+
+        console.log('Seed завершен!');
+        process.exit(0);
+    } catch (error) {
+        console.error('Ошибка:', error.message);
+        process.exit(1);
+    }
+}
+
+seed();
+
+========== ./.gitignore ==========
+node_modules/
+.env
+.env.local
+*.log
+npm-debug.log*
+coverage/
+dist/
+build/
+.DS_Store
+
+========== ./.eslintrc.js ==========
+
+========== ./.env ==========
+PORT=3000
+HOST=localhost
+NODE_ENV=development
+LOG_LEVEL=info
+
+MONGO_URI=mongodb://127.0.0.1:27017/myapp
+
+JWT_SECRET=secretkey
+JWT_EXPIRES_IN=7d
+
+SESSION_SECRET=sessionsecret
+SESSION_MAX_AGE=86400000
+
+BCRYPT_SALT_ROUNDS=10
+
+CSRF_SECRET=csrfsecret
+
+CORS_ORIGIN=http://localhost:3000
+
+AUTH_RATE_LIMIT_WINDOW_MS=900000
+AUTH_RATE_LIMIT_MAX=10
+
+MAX_LOGIN_ATTEMPTS=5
+LOCK_TIME_MS=900000
+
+GOOGLE_CLIENT_ID=
+GOOGLE_CLIENT_SECRET=
+GOOGLE_CALLBACK_URL=http://localhost:3000/api/v1/auth/google/callback
+
+========== ./src/config/passport.js ==========
+const passport = require('passport');
+const LocalStrategy = require('passport-local').Strategy;
+const { Strategy: JwtStrategy, ExtractJwt } = require('passport-jwt');
+const GoogleStrategy = require('passport-google-oauth20').Strategy;
+
+const User = require('../core/models/User');
+const { comparePassword } = require('../lib/password');
+const config = require('./env');
+const logger = require('./logger');
+
+passport.use(
+    new LocalStrategy(
+        { usernameField: 'email', passwordField: 'password' },
+        async (email, password, done) => {
+            try {
+                const normalizedEmail = email.toLowerCase().trim();
+                const user = await User.findOne({
+                    email: normalizedEmail,
+                }).select('+password +failedLoginAttempts +lockUntil');
+
+                if (!user) {
+                    return done(null, false, {
+                        message: 'Неверный email или пароль',
+                    });
+                }
+
+                if (user.lockUntil && user.lockUntil > Date.now()) {
+                    const minutes = Math.ceil(
+                        (user.lockUntil - Date.now()) / 60000
+                    );
+                    return done(null, false, {
+                        message: `Аккаунт временно заблокирован. Попробуйте через ${minutes} мин.`,
+                    });
+                }
+
+                const isMatch = await comparePassword(password, user.password);
+
+                if (!isMatch) {
+                    await user.incrementLoginAttempts(config);
+                    return done(null, false, {
+                        message: 'Неверный email или пароль',
+                    });
+                }
+
+                if (user.failedLoginAttempts > 0 || user.lockUntil) {
+                    await user.resetLoginAttempts();
+                }
+
+                return done(null, user);
+            } catch (err) {
+                return done(err);
+            }
+        }
+    )
+);
+
+passport.use(
+    new JwtStrategy(
+        {
+            jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
+            secretOrKey: config.JWT_SECRET,
+        },
+        async (payload, done) => {
+            try {
+                const user = await User.findById(payload.id);
+                if (!user || !user.isActive) {
+                    return done(null, false);
+                }
+                return done(null, user);
+            } catch (err) {
+                return done(err, false);
+            }
+        }
+    )
+);
+
+if (config.GOOGLE_CLIENT_ID && config.GOOGLE_CLIENT_SECRET) {
+    passport.use(
+        new GoogleStrategy(
+            {
+                clientID: config.GOOGLE_CLIENT_ID,
+                clientSecret: config.GOOGLE_CLIENT_SECRET,
+                callbackURL: config.GOOGLE_CALLBACK_URL,
+            },
+            async (accessToken, refreshToken, profile, done) => {
+                try {
+                    let user = await User.findOne({ googleId: profile.id });
+
+                    if (!user) {
+                        const email = profile.emails?.[0]?.value?.toLowerCase();
+                        user = await User.findOne({ email });
+
+                        if (user) {
+                            user.googleId = profile.id;
+                            await user.save();
+                        } else {
+                            user = await User.create({
+                                name: profile.displayName,
+                                email,
+                                googleId: profile.id,
+                                password: undefined,
+                                role: 'user',
+                            });
+                        }
+                    }
+
+                    return done(null, user);
+                } catch (err) {
+                    return done(err, null);
+                }
+            }
+        )
+    );
+    logger.info('Google OAuth стратегия подключена');
+} else {
+    logger.info('Google OAuth не настроен (нет CLIENT_ID/SECRET в .env)');
+}
+
+passport.serializeUser((user, done) => {
+    done(null, user._id);
+});
+
+passport.deserializeUser(async (id, done) => {
+    try {
+        const user = await User.findById(id);
+        done(null, user);
+    } catch (err) {
+        done(err, null);
+    }
+});
+
+module.exports = passport;
+
+========== ./src/config/db.js ==========
+const mongoose = require('mongoose');
+const config = require('./env');
+const logger = require('./logger');
+
+async function connectDB() {
+    try {
+        await mongoose.connect(config.MONGO_URI);
+        logger.info('MongoDB подключена (Mongoose)');
+    } catch (err) {
+        logger.error(`Ошибка подключения MongoDB: ${err.message}`);
+        process.exit(1);
+    }
+}
+
+module.exports = connectDB;
+
+========== ./src/config/env.js ==========
+const dotenv = require('dotenv');
+dotenv.config();
+
+module.exports = {
+    PORT: process.env.PORT || 3000,
+    HOST: process.env.HOST || 'localhost',
+    NODE_ENV: process.env.NODE_ENV || 'development',
+    LOG_LEVEL: process.env.LOG_LEVEL || 'info',
+
+    MONGO_URI: process.env.MONGO_URI || 'mongodb://127.0.0.1:27017/myapp',
+
+    JWT_SECRET: process.env.JWT_SECRET || 'secretkey',
+    JWT_EXPIRES_IN: process.env.JWT_EXPIRES_IN || '7d',
+
+    SESSION_SECRET: process.env.SESSION_SECRET || 'sessionsecret',
+    SESSION_MAX_AGE:
+        parseInt(process.env.SESSION_MAX_AGE) || 24 * 60 * 60 * 1000,
+
+    BCRYPT_SALT_ROUNDS: parseInt(process.env.BCRYPT_SALT_ROUNDS) || 10,
+
+    CSRF_SECRET: process.env.CSRF_SECRET || 'csrfsecret',
+
+    CORS_ORIGIN: process.env.CORS_ORIGIN || '*',
+
+    AUTH_RATE_LIMIT_WINDOW_MS:
+        parseInt(process.env.AUTH_RATE_LIMIT_WINDOW_MS) || 15 * 60 * 1000,
+    AUTH_RATE_LIMIT_MAX: parseInt(process.env.AUTH_RATE_LIMIT_MAX) || 10,
+
+    MAX_LOGIN_ATTEMPTS: parseInt(process.env.MAX_LOGIN_ATTEMPTS) || 5,
+    LOCK_TIME_MS: parseInt(process.env.LOCK_TIME_MS) || 15 * 60 * 1000,
+
+    GOOGLE_CLIENT_ID: process.env.GOOGLE_CLIENT_ID || '',
+    GOOGLE_CLIENT_SECRET: process.env.GOOGLE_CLIENT_SECRET || '',
+    GOOGLE_CALLBACK_URL:
+        process.env.GOOGLE_CALLBACK_URL ||
+        'http://localhost:3000/api/v1/auth/google/callback',
+};
+
+========== ./src/config/logger.js ==========
+const winston = require('winston');
+const config = require('./env');
+
+const logger = winston.createLogger({
+    level: config.LOG_LEVEL,
+    format: winston.format.combine(
+        winston.format.timestamp(),
+        winston.format.printf(
+            ({ timestamp, level, message }) =>
+                `[${timestamp}] ${level.toUpperCase()}: ${message}`
+        )
+    ),
+    transports: [
+        new winston.transports.Console(),
+        new winston.transports.File({
+            filename: 'logs/error.log',
+            level: 'error',
+        }),
+        new winston.transports.File({ filename: 'logs/combined.log' }),
+    ],
+});
+
+logger.logError = (err, req = null) => {
+    const meta = {
+        message: err.message,
+        stack: err.stack,
+        code: err.code || err.statusCode || 500,
+    };
+    if (req) {
+        meta.url = req.url;
+        meta.method = req.method;
+        meta.ip = req.ip;
+    }
+    logger.error(JSON.stringify(meta));
+};
+
+logger.auth = (userId, action, success) => {
+    logger.info(`[AUTH] user=${userId} action=${action} success=${success}`);
+};
+
+module.exports = logger;
+
+========== ./src/app.js ==========
+const express = require('express');
+const path = require('path');
+const cookieParser = require('cookie-parser');
+const cors = require('cors');
+const session = require('express-session');
+const MongoStore = require('connect-mongo');
+const passport = require('./config/passport');
+const config = require('./config/env');
+const requestLogger = require('./api/middlewares/logger');
+const notFound = require('./api/middlewares/notFound');
+const errorHandler = require('./api/middlewares/errorHandler');
+const { globalLimiter } = require('./api/middlewares/rateLimiter');
+const {
+    helmetMiddleware,
+    mongoSanitizeMiddleware,
+    hppMiddleware,
+    xssSanitize,
+} = require('./api/middlewares/security');
+
+const app = express();
+
+app.set('view engine', 'ejs');
+app.set('views', path.join(__dirname, '../templates/pages'));
+app.set('trust proxy', 1);
+
+//Security headers
+app.use(helmetMiddleware);
+
+//CORS
+app.use(
+    cors({
+        origin: config.CORS_ORIGIN,
+        credentials: true,
+    })
+);
+
+//Общий rate limiter
+app.use(globalLimiter);
+
+//Логирование
+app.use(requestLogger);
+
+//Парсинг
+app.use(express.json({ limit: '10kb' }));
+app.use(express.urlencoded({ extended: true, limit: '10kb' }));
+
+//Санитайзеры
+app.use(mongoSanitizeMiddleware);
+app.use(xssSanitize);
+app.use(hppMiddleware);
+
+//Cookie
+app.use(cookieParser());
+
+//Статика
+app.use(express.static(path.join(__dirname, '../public')));
+
+//Сессии + Passport
+app.use(
+    session({
+        secret: config.SESSION_SECRET,
+        resave: false,
+        saveUninitialized: false,
+        store: MongoStore.create({
+            mongoUrl: config.MONGO_URI,
+            collectionName: 'sessions',
+        }),
+        cookie: {
+            secure: config.NODE_ENV === 'production',
+            httpOnly: true,
+            sameSite: 'lax',
+            maxAge: config.SESSION_MAX_AGE,
+        },
+    })
+);
+app.use(passport.initialize());
+app.use(passport.session());
+
+//Роуты
+app.use('/api/v1', require('./api/v1')); // REST API JWT, без CSRF
+app.use('/', require('./routes/webRouter')); //сессии + CSRF
+
+//404 и обработка ошибок — строго в конце
+app.use(notFound);
+app.use(errorHandler);
+
+module.exports = app;
+
+========== ./src/core/repositories/userRepository.js ==========
+const User = require('../models/User');
+
+class UserRepository {
+    async findAll({ page = 1, limit = 20 } = {}) {
+        const skip = (page - 1) * limit;
+        return await User.find().select('-__v').skip(skip).limit(limit);
+    }
+
+    async count() {
+        return await User.countDocuments();
+    }
+
+    async findById(id) {
+        return await User.findById(id).select('-__v');
+    }
+
+    async findByEmail(email) {
+        return await User.findOne({ email: email.toLowerCase().trim() }).select(
+            '-__v'
+        );
+    }
+
+    async create(userData) {
+        return await User.create(userData);
+    }
+
+    async update(id, userData) {
+        return await User.findByIdAndUpdate(id, userData, {
+            new: true,
+            runValidators: true,
+        }).select('-__v');
+    }
+
+    async delete(id) {
+        return await User.findByIdAndDelete(id);
+    }
+}
+
+module.exports = new UserRepository();
+
+========== ./src/core/models/User.js ==========
+const mongoose = require('mongoose');
+
+const userSchema = new mongoose.Schema(
+    {
+        name: {
+            type: String,
+            required: [true, 'Имя обязательно'],
+            trim: true,
+            minlength: [2, 'Имя должно быть минимум 2 символа'],
+            maxlength: [25, 'Имя не должно превышать 25 символов'],
+        },
+        email: {
+            type: String,
+            required: [true, 'Email обязателен'],
+            unique: true,
+            lowercase: true,
+            trim: true,
+            set: v => (v ? v.toLowerCase().trim() : v),
+            match: [/^[^\s@]+@[^\s@]+\.[^\s@]+$/, 'Неверный формат email'],
+        },
+        password: {
+            type: String,
+            minlength: [8, 'Пароль должен быть минимум 8 символов'],
+            select: false,
+        },
+        role: {
+            type: String,
+            enum: ['user', 'admin'],
+            default: 'user',
+        },
+        isActive: {
+            type: Boolean,
+            default: true,
+        },
+        googleId: {
+            type: String,
+            default: null,
+        },
+        failedLoginAttempts: {
+            type: Number,
+            default: 0,
+            select: false,
+        },
+        lockUntil: {
+            type: Date,
+            default: null,
+            select: false,
+        },
+    },
+    {
+        timestamps: true,
+    }
+);
+
+userSchema.methods.incrementLoginAttempts = async function (config) {
+    this.failedLoginAttempts += 1;
+
+    if (this.failedLoginAttempts >= config.MAX_LOGIN_ATTEMPTS) {
+        this.lockUntil = Date.now() + config.LOCK_TIME_MS;
+    }
+
+    await this.save({ validateBeforeSave: false });
+};
+
+userSchema.methods.resetLoginAttempts = async function () {
+    this.failedLoginAttempts = 0;
+    this.lockUntil = null;
+    await this.save({ validateBeforeSave: false });
+};
+
+module.exports = mongoose.model('User', userSchema);
+
+========== ./src/core/services/userService.js ==========
+const userRepository = require('../repositories/userRepository');
+const ApiError = require('../../lib/ApiError');
+
+class UserService {
+    async getAllUsers(query) {
+        const users = await userRepository.findAll(query);
+        const total = await userRepository.count();
+        return { users, total };
+    }
+
+    async getUserById(id) {
+        const user = await userRepository.findById(id);
+        if (!user) throw ApiError.notFound('Пользователь не найден');
+        return user;
+    }
+
+    async createUser(userData) {
+        if (!userData.name || !userData.email) {
+            throw ApiError.badRequest('Имя и Email обязательны');
+        }
+
+        const normalizedEmail = userData.email.toLowerCase().trim();
+        const existing = await userRepository.findByEmail(normalizedEmail);
+        if (existing) {
+            throw ApiError.badRequest(
+                'Пользователь с таким Email уже существует'
+            );
+        }
+
+        return await userRepository.create({
+            ...userData,
+            email: normalizedEmail,
+        });
+    }
+
+    async updateUser(id, userData) {
+        const user = await userRepository.findById(id);
+        if (!user) throw ApiError.notFound('Пользователь не найден');
+
+        if (userData.email) {
+            const normalizedEmail = userData.email.toLowerCase().trim();
+            if (normalizedEmail !== user.email) {
+                const existing =
+                    await userRepository.findByEmail(normalizedEmail);
+                if (existing) {
+                    throw ApiError.badRequest(
+                        'Пользователь с таким Email уже существует'
+                    );
+                }
+            }
+            userData.email = normalizedEmail;
+        }
+
+        return await userRepository.update(id, userData);
+    }
+
+    async deleteUser(id) {
+        const user = await userRepository.findById(id);
+        if (!user) throw ApiError.notFound('Пользователь не найден');
+        return await userRepository.delete(id);
+    }
+}
+
+module.exports = new UserService();
+
+========== ./src/core/services/authService.js ==========
+const User = require('../models/User');
+const { generateToken } = require('../../lib/jwt');
+const { hashPassword } = require('../../lib/password');
+const ApiError = require('../../lib/ApiError');
+
+class AuthService {
+    async register({ name, email, password }) {
+        const normalizedEmail = email.toLowerCase().trim();
+
+        const existing = await User.findOne({ email: normalizedEmail });
+        if (existing) {
+            throw ApiError.badRequest(
+                'Пользователь с таким Email уже существует'
+            );
+        }
+
+        const hashedPassword = await hashPassword(password);
+        const user = await User.create({
+            name,
+            email: normalizedEmail,
+            password: hashedPassword,
+            role: 'user',
+        });
+
+        const token = generateToken({
+            id: user._id,
+            email: user.email,
+            role: user.role,
+        });
+
+        const userWithoutPassword = user.toObject();
+        delete userWithoutPassword.password;
+
+        return { user: userWithoutPassword, token };
+    }
+
+    async login(email, password, config) {
+        const normalizedEmail = email.toLowerCase().trim();
+        const user = await User.findOne({ email: normalizedEmail }).select(
+            '+password +failedLoginAttempts +lockUntil'
+        );
+
+        if (!user) throw ApiError.unauthorized('Неверный email или пароль');
+
+        if (user.lockUntil && user.lockUntil > Date.now()) {
+            const minutes = Math.ceil((user.lockUntil - Date.now()) / 60000);
+            throw ApiError.tooManyRequests(
+                `Аккаунт заблокирован. Попробуйте через ${minutes} мин.`
+            );
+        }
+
+        const { comparePassword } = require('../../lib/password');
+        const isMatch = await comparePassword(password, user.password);
+
+        if (!isMatch) {
+            await user.incrementLoginAttempts(config);
+            throw ApiError.unauthorized('Неверный email или пароль');
+        }
+
+        if (user.failedLoginAttempts > 0) {
+            await user.resetLoginAttempts();
+        }
+
+        const token = generateToken({
+            id: user._id,
+            email: user.email,
+            role: user.role,
+        });
+
+        const userWithoutPassword = user.toObject();
+        delete userWithoutPassword.password;
+
+        return { user: userWithoutPassword, token };
+    }
+}
+
+module.exports = new AuthService();
+
+========== ./src/index.js ==========
+const app = require('./app');
+const config = require('./config/env');
+const connectDB = require('./config/db');
+
+async function start() {
+    await connectDB();
+
+    app.listen(config.PORT, () => {
+        console.log(`http://localhost:${config.PORT}`);
+        console.log(`${config.NODE_ENV}`);
+    });
+}
+
+start();
+
+========== ./src/lib/ApiError.js ==========
+class ApiError extends Error {
+    constructor(message, statusCode, errors = []) {
+        super(message);
+        this.statusCode = statusCode;
+        this.errors = errors;
+        this.isOperational = true;
+    }
+
+    static badRequest(message, errors) {
+        return new ApiError(message, 400, errors);
+    }
+    static unauthorized(message) {
+        return new ApiError(message || 'Требуется авторизация', 401);
+    }
+    static forbidden(message) {
+        return new ApiError(message || 'Доступ запрещён', 403);
+    }
+    static notFound(message) {
+        return new ApiError(message || 'Не найдено', 404);
+    }
+    static tooManyRequests(message) {
+        return new ApiError(message || 'Слишком много запросов', 429);
+    }
+    static internal(message) {
+        return new ApiError(message || 'Внутренняя ошибка сервера', 500);
+    }
+}
+
+module.exports = ApiError;
+
+========== ./src/lib/catchAsync.js ==========
+const catchAsync = fn => (req, res, next) => {
+    fn(req, res, next).catch(next);
+};
+
+module.exports = catchAsync;
+
+========== ./src/lib/jwt.js ==========
+const jwt = require('jsonwebtoken');
+const config = require('../config/env');
+
+function generateToken(payload) {
+    return jwt.sign(payload, config.JWT_SECRET, {
+        expiresIn: config.JWT_EXPIRES_IN,
+    });
+}
+
+function verifyToken(token) {
+    return jwt.verify(token, config.JWT_SECRET);
+}
+
+module.exports = { generateToken, verifyToken };
+
+========== ./src/lib/password.js ==========
+const bcrypt = require('bcrypt');
+const config = require('../config/env');
+
+async function hashPassword(password) {
+    const salt = await bcrypt.genSalt(config.BCRYPT_SALT_ROUNDS);
+    return await bcrypt.hash(password, salt);
+}
+
+async function comparePassword(password, hashedPassword) {
+    if (!hashedPassword) return false;
+    return await bcrypt.compare(password, hashedPassword);
+}
+
+module.exports = { hashPassword, comparePassword };
+
+========== ./src/api/middlewares/notFound.js ==========
+function notFound(req, res) {
+    res.status(404).json({
+        success: false,
+        message: `Путь ${req.originalUrl} не найден`,
+    });
+}
+
+module.exports = notFound;
+
+========== ./src/api/middlewares/errorHandler.js ==========
+const logger = require('../../config/logger');
+const config = require('../../config/env');
+
+function errorHandler(err, req, res, next) {
+    logger.logError(err, req);
+
+    let statusCode = err.statusCode || 500;
+    let message = err.message || 'Внутренняя ошибка сервера';
+    let errors = err.errors && err.errors.length ? err.errors : undefined;
+
+    if (err.name === 'CastError') {
+        statusCode = 400;
+        message = `Некорректный идентификатор: ${err.value}`;
+    }
+
+    if (err.name === 'ValidationError') {
+        statusCode = 400;
+        message = 'Ошибка валидации данных';
+        errors = Object.values(err.errors).map(e => e.message);
+    }
+
+    if (err.code === 11000) {
+        statusCode = 400;
+        const field = Object.keys(err.keyValue || {})[0];
+        message = `Значение поля "${field}" уже используется`;
+    }
+
+    if (err.name === 'JsonWebTokenError' || err.name === 'TokenExpiredError') {
+        statusCode = 401;
+        message = 'Неверный или просроченный токен';
+    }
+
+    res.status(statusCode).json({
+        success: false,
+        message,
+        ...(errors && { errors }),
+        ...(config.NODE_ENV === 'development' && { stack: err.stack }),
+    });
+}
+
+module.exports = errorHandler;
+
+========== ./src/api/middlewares/auth.js ==========
+const passport = require('../../config/passport');
+
+const auth = (req, res, next) => {
+    passport.authenticate('jwt', { session: false }, (err, user) => {
+        if (err) return next(err);
+        if (!user) {
+            return res.status(401).json({
+                success: false,
+                message: 'Требуется авторизация (неверный или отсутствующий токен)',
+            });
+        }
+        req.user = user;
+        next();
+    })(req, res, next);
+};
+
+module.exports = auth;
+
+========== ./src/api/middlewares/rateLimiter.js ==========
+const rateLimit = require('express-rate-limit');
+const config = require('../../config/env');
+
+const globalLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 300,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: {
+        success: false,
+        message: 'Слишком много запросов с этого IP. Попробуйте позже.',
+    },
+});
+
+const authLimiter = rateLimit({
+    windowMs: config.AUTH_RATE_LIMIT_WINDOW_MS,
+    max: config.AUTH_RATE_LIMIT_MAX,
+    standardHeaders: true,
+    legacyHeaders: false,
+    skipSuccessfulRequests: true,
+    message: {
+        success: false,
+        message:
+            'Слишком много попыток входа. Попробуйте снова через 15 минут.',
+    },
+});
+
+module.exports = { globalLimiter, authLimiter };
+
+========== ./src/api/middlewares/security.js ==========
+const helmet = require('helmet');
+const mongoSanitize = require('express-mongo-sanitize');
+const hpp = require('hpp');
+const { filterXSS } = require('xss');
+
+const helmetMiddleware = helmet({
+    contentSecurityPolicy: {
+        directives: {
+            defaultSrc: ["'self'"],
+            styleSrc: [
+                "'self'",
+                'https://fonts.googleapis.com',
+                "'unsafe-inline'",
+            ],
+            fontSrc: ["'self'", 'https://fonts.gstatic.com'],
+            scriptSrc: ["'self'"],
+            imgSrc: ["'self'", 'data:'],
+        },
+    },
+});
+
+const mongoSanitizeMiddleware = mongoSanitize({
+    replaceWith: '_',
+});
+
+const hppMiddleware = hpp();
+
+function xssSanitize(req, res, next) {
+    const sanitizeObject = obj => {
+        if (!obj || typeof obj !== 'object') return;
+        for (const key of Object.keys(obj)) {
+            if (typeof obj[key] === 'string') {
+                obj[key] = filterXSS(obj[key], {
+                    whiteList: {},
+                });
+            } else if (typeof obj[key] === 'object') {
+                sanitizeObject(obj[key]);
+            }
+        }
+    };
+
+    sanitizeObject(req.body);
+    sanitizeObject(req.query);
+    sanitizeObject(req.params);
+    next();
+}
+
+module.exports = {
+    helmetMiddleware,
+    mongoSanitizeMiddleware,
+    hppMiddleware,
+    xssSanitize,
+};
+
+========== ./src/api/middlewares/validate.js ==========
+const validate = schema => (req, res, next) => {
+    const { error } = schema.validate(req.body, { abortEarly: false });
+    if (error) {
+        const errors = error.details.map(d => d.message);
+        return res.status(400).json({
+            success: false,
+            message: 'Ошибка валидации данных',
+            errors,
+        });
+    }
+    next();
+};
+
+module.exports = validate;
+
+========== ./src/api/middlewares/logger.js ==========
+const logger = require('../../config/logger');
+
+function requestLogger(req, res, next) {
+    logger.info(`${req.method} ${req.originalUrl} - IP: ${req.ip}`);
+    next();
+}
+
+module.exports = requestLogger;
+
+========== ./src/api/middlewares/csrf.js ==========
+const crypto = require('crypto');
+const config = require('../../config/env');
+const CSRF_COOKIE_NAME = 'csrf_token';
+const CSRF_HEADER_NAME = 'x-csrf-token';
+
+function generateCsrfToken(req, res, next) {
+    let token = req.cookies?.[CSRF_COOKIE_NAME];
+
+    if (!token) {
+        token = crypto
+            .createHmac('sha256', config.CSRF_SECRET)
+            .update(crypto.randomBytes(32))
+            .digest('hex');
+
+        res.cookie(CSRF_COOKIE_NAME, token, {
+            httpOnly: false,
+            secure: config.NODE_ENV === 'production',
+            sameSite: 'strict',
+        });
+    }
+
+    res.locals.csrfToken = token;
+    next();
+}
+
+function verifyCsrfToken(req, res, next) {
+    const cookieToken = req.cookies?.[CSRF_COOKIE_NAME];
+    const clientToken = req.body?._csrf || req.headers[CSRF_HEADER_NAME];
+
+    if (!cookieToken || !clientToken || cookieToken !== clientToken) {
+        return res.status(403).json({
+            success: false,
+            message: 'Недействительный CSRF-токен. Обновите страницу.',
+        });
+    }
+
+    next();
+}
+
+module.exports = { generateCsrfToken, verifyCsrfToken, CSRF_HEADER_NAME };
+
+========== ./src/api/middlewares/rbac.js ==========
+function rbac(...allowedRoles) {
+    return (req, res, next) => {
+        if (!req.user) {
+            return res.status(401).json({
+                success: false,
+                message: 'Требуется авторизация',
+            });
+        }
+
+        if (!allowedRoles.includes(req.user.role)) {
+            return res.status(403).json({
+                success: false,
+                message: 'Недостаточно прав для выполнения операции',
+            });
+        }
+
+        next();
+    };
+}
+
+module.exports = rbac;
+
+========== ./src/api/v1/auth/authRouter.js ==========
+const express = require('express');
+const router = express.Router();
+const controller = require('./authController');
+const validate = require('../../middlewares/validate');
+const { registerSchema, loginSchema } = require('./authValidation');
+const { verifyCsrfToken } = require('../../middlewares/csrf');
+
+router.post('/register', validate(registerSchema), controller.register);
+router.post('/login', validate(loginSchema), controller.login);
+router.post('/logout', controller.logout);
+router.post(
+    '/session-login',
+    authLimiter,
+    verifyCsrfToken,
+    validate(loginSchema),
+    controller.sessionLogin
+);
+router.get('/session', controller.getSessionInfo);
+
+module.exports = router;
+
+========== ./src/api/v1/auth/authController.js ==========
+const passport = require('../../../config/passport');
+const authService = require('../../../core/services/authService');
+const logger = require('../../../config/logger');
+const config = require('../../../config/env');
+const catchAsync = require('../../../lib/catchAsync');
+
+const register = catchAsync(async (req, res) => {
+    const { user, token } = await authService.register(req.body);
+    logger.auth(user._id, 'register', true);
+
+    res.status(201).json({ success: true, data: { user, token } });
+});
+
+const login = catchAsync(async (req, res, next) => {
+    const { email, password } = req.body;
+    try {
+        const { user, token } = await authService.login(
+            email,
+            password,
+            config
+        );
+        logger.auth(user._id, 'login_jwt', true);
+        res.json({ success: true, data: { user, token } });
+    } catch (err) {
+        logger.auth(email, 'login_jwt', false);
+        next(err);
+    }
+});
+
+const sessionLogin = (req, res, next) => {
+    passport.authenticate('local', (err, user, info) => {
+        if (err) return next(err);
+        if (!user) {
+            logger.auth(req.body.email, 'login_session', false);
+            return res.status(401).json({
+                success: false,
+                message: info?.message || 'Неверный email или пароль',
+            });
+        }
+        req.login(user, loginErr => {
+            if (loginErr) return next(loginErr);
+            logger.auth(user._id, 'login_session', true);
+            const userSafe = user.toObject();
+            delete userSafe.password;
+            res.json({ success: true, data: { user: userSafe } });
+        });
+    })(req, res, next);
+};
+
+const logout = (req, res, next) => {
+    const userId = req.user?._id || 'unknown';
+    req.logout(err => {
+        if (err) return next(err);
+        req.session.destroy(() => {
+            res.clearCookie('connect.sid');
+            logger.auth(userId, 'logout', true);
+            res.json({ success: true, message: 'Выход выполнен' });
+        });
+    });
+};
+
+const getSessionInfo = (req, res) => {
+    res.json({
+        success: true,
+        authenticated: !!req.user,
+        user: req.user || null,
+    });
+};
+
+const googleAuth = passport.authenticate('google', {
+    scope: ['profile', 'email'],
+});
+
+const googleCallback = (req, res, next) => {
+    passport.authenticate('google', { failureRedirect: '/login' }, err => {
+        if (err) return next(err);
+        req.login(req.user, loginErr => {
+            if (loginErr) return next(loginErr);
+            logger.auth(req.user._id, 'login_google', true);
+            res.redirect('/');
+        });
+    })(req, res, next);
+};
+
+module.exports = {
+    register,
+    login,
+    sessionLogin,
+    logout,
+    getSessionInfo,
+    googleAuth,
+    googleCallback,
+};
+
+========== ./src/api/v1/auth/authValidation.js ==========
+const Joi = require('joi');
+
+const registerSchema = Joi.object({
+    name: Joi.string().min(2).max(25).required().messages({
+        'string.empty': 'Имя обязательно',
+        'string.min': 'Имя должно быть минимум 2 символа',
+        'any.required': 'Имя обязательно',
+    }),
+    email: Joi.string().email().required().messages({
+        'string.email': 'Неверный формат email',
+        'any.required': 'Email обязателен',
+    }),
+    password: Joi.string().min(8).required().messages({
+        'string.min': 'Пароль должен быть минимум 8 символов',
+        'any.required': 'Пароль обязателен',
+    }),
+});
+
+const loginSchema = Joi.object({
+    email: Joi.string().email().required(),
+    password: Joi.string().required(),
+});
+
+module.exports = { registerSchema, loginSchema };
+
+========== ./src/api/v1/users/usersRouter.js ==========
+const express = require('express');
+const router = express.Router();
+const controller = require('./usersController');
+const validate = require('../../middlewares/validate');
+const { createUserSchema, updateUserSchema } = require('./usersValidation');
+const auth = require('../../middlewares/auth');
+const rbac = require('../../middlewares/rbac');
+
+router.use(auth);
+
+router.get('/', rbac('user', 'admin'), controller.getUsers);
+router.get('/:id', rbac('user', 'admin'), controller.getUserById);
+
+router.post(
+    '/',
+    rbac('admin'),
+    validate(createUserSchema),
+    controller.createUser
+);
+router.put(
+    '/:id',
+    rbac('admin'),
+    validate(updateUserSchema),
+    controller.updateUser
+);
+router.delete('/:id', rbac('admin'), controller.deleteUser);
+
+module.exports = router;
+
+========== ./src/api/v1/users/usersController.js ==========
+const userService = require('../../../core/services/userService');
+const catchAsync = require('../../../lib/catchAsync');
+const logger = require('../../../config/logger');
+
+const getUsers = catchAsync(async (req, res) => {
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 20;
+
+    const { users, total } = await userService.getAllUsers({ page, limit });
+
+    res.json({
+        success: true,
+        count: users.length,
+        total,
+        page,
+        pages: Math.ceil(total / limit),
+        data: users,
+    });
+});
+
+const getUserById = catchAsync(async (req, res) => {
+    const user = await userService.getUserById(req.params.id);
+    res.json({ success: true, data: user });
+});
+
+const createUser = catchAsync(async (req, res) => {
+    const { hashPassword } = require('../../../lib/password');
+    const payload = { ...req.body };
+    if (payload.password) {
+        payload.password = await hashPassword(payload.password);
+    }
+    const user = await userService.createUser(payload);
+    logger.info(`Admin ${req.user.email} создал пользователя ${user.email}`);
+    res.status(201).json({ success: true, data: user });
+});
+
+const updateUser = catchAsync(async (req, res) => {
+    const user = await userService.updateUser(req.params.id, req.body);
+    logger.info(
+        `Admin ${req.user.email} обновил пользователя ${req.params.id}`
+    );
+    res.json({ success: true, data: user });
+});
+
+const deleteUser = catchAsync(async (req, res) => {
+    await userService.deleteUser(req.params.id);
+    logger.warn(`Admin ${req.user.email} удалил пользователя ${req.params.id}`);
+    res.json({ success: true, message: 'Пользователь удалён' });
+});
+
+module.exports = {
+    getUsers,
+    getUserById,
+    createUser,
+    updateUser,
+    deleteUser,
+};
+
+========== ./src/api/v1/users/usersValidation.js ==========
+const Joi = require('joi');
+
+const createUserSchema = Joi.object({
+    name: Joi.string().min(2).max(25).required(),
+    email: Joi.string().email().required(),
+    password: Joi.string().min(8).required(),
+    role: Joi.string().valid('user', 'admin').optional(),
+});
+
+const updateUserSchema = Joi.object({
+    name: Joi.string().min(2).max(25),
+    email: Joi.string().email(),
+    role: Joi.string().valid('user', 'admin'),
+    isActive: Joi.boolean(),
+}).min(1);
+
+module.exports = { createUserSchema, updateUserSchema };
+
+========== ./src/api/v1/index.js ==========
+const express = require('express');
+const router = express.Router();
+
+router.use('/users', require('./users/usersRouter'));
+router.use('/auth', require('./auth/authRouter'));
+router.use('/admin', require('./admin/adminRouter'));
+
+module.exports = router;
+
+========== ./src/api/v1/admin/adminController.js ==========
+const userRepository = require('../../../core/repositories/userRepository');
+const catchAsync = require('../../../lib/catchAsync');
+const ApiError = require('../../../lib/ApiError');
+const logger = require('../../../config/logger');
+
+const makeAdmin = catchAsync(async (req, res, next) => {
+    const userId = req.params.id;
+    const user = await userRepository.findById(userId);
+
+    if (!user) return next(ApiError.notFound('Пользователь не найден'));
+    if (user.role === 'admin') {
+        return next(ApiError.badRequest('Пользователь уже администратор'));
+    }
+
+    const updatedUser = await userRepository.update(userId, { role: 'admin' });
+    logger.auth(userId, 'make_admin', true);
+
+    res.json({
+        success: true,
+        message: 'Пользователь назначен администратором',
+        data: updatedUser,
+    });
+});
+
+module.exports = { makeAdmin };
+
+========== ./src/api/v1/admin/adminRouter.js ==========
+const express = require('express');
+const router = express.Router();
+const adminController = require('./adminController');
+const auth = require('../../middlewares/auth');
+const rbac = require('../../middlewares/rbac');
+
+router.use(auth);
+router.post('/make-admin/:id', rbac('admin'), adminController.makeAdmin);
+
+module.exports = router;
+
+========== ./src/routes/webRouter.js ==========
+const express = require('express');
+const router = express.Router();
+const { generateCsrfToken } = require('../api/middlewares/csrf');
+const {
+    ensureAuthenticated,
+    ensureGuest,
+    ensureRole,
+} = require('../api/middlewares/ensureAuthenticated');
+
+router.use(generateCsrfToken);
+
+router.get('/', (req, res) => {
+    res.render('home', {
+        title: 'Главная страница',
+        content: 'Добро пожаловать на наш сайт',
+        user: req.user || null,
+    });
+});
+
+router.get('/about', (req, res) => {
+    res.render('about', {
+        title: 'О нас',
+        companyName: 'NodeJS Server',
+        experience: '3 года',
+        projects: '25+',
+        user: req.user || null,
+    });
+});
+
+router.get('/contact', (req, res) => {
+    res.render('contact', {
+        title: 'Контакты',
+        email: 'info@example.com',
+        phone: '+7 (999) 123-45-67',
+        user: req.user || null,
+    });
+});
+
+router.get('/login', ensureGuest, (req, res) => {
+    res.render('login', {
+        title: 'Вход в систему',
+        csrfToken: res.locals.csrfToken,
+    });
+});
+
+router.get('/register', ensureGuest, (req, res) => {
+    res.render('register', {
+        title: 'Регистрация',
+        csrfToken: res.locals.csrfToken,
+    });
+});
+
+router.get('/users', ensureAuthenticated, ensureRole('admin'), (req, res) => {
+    res.render('userList', {
+        title: 'Управление пользователями',
+        userCount: 0,
+        user: req.user,
+    });
+});
+
+module.exports = router;
+
+========== ./README.md ==========
+
+========== ./public/js/main.js ==========
+function getToken() {
+    return localStorage.getItem('token');
+}
+
+function isAuthenticated() {
+    return !!getToken();
+}
+
+function logout() {
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+    window.location.href = '/';
+}
+
+function escapeHtml(str) {
+    if (!str) return '';
+    return str
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
+
+function showMessage(message, type, elementId = 'addUserMessage') {
+    const messageDiv = document.getElementById(elementId);
+    if (!messageDiv) return;
+
+    messageDiv.textContent = message;
+    messageDiv.className = `form-message ${type}`;
+
+    setTimeout(() => {
+        messageDiv.textContent = '';
+        messageDiv.className = 'form-message';
+    }, 3000);
+}
+
+document.getElementById('loginForm')?.addEventListener('submit', async e => {
+    e.preventDefault();
+
+    const email = document.getElementById('email').value;
+    const password = document.getElementById('password').value;
+    const messageDiv = document.getElementById('loginMessage');
+
+    try {
+        const response = await fetch('/api/v1/auth/login', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email, password }),
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+            localStorage.setItem('token', data.data.token);
+            localStorage.setItem('user', JSON.stringify(data.data.user));
+            messageDiv.innerHTML =
+                '<p style="color: #00ff00;">Вход выполнен! Перенаправление...</p>';
+            setTimeout(() => (window.location.href = '/'), 1000);
+        } else {
+            messageDiv.innerHTML = `<p style="color: #ff0000;"> ${data.message}</p>`;
+        }
+    } catch (error) {
+        messageDiv.innerHTML =
+            '<p style="color: #ff0000;">Ошибка соединения</p>';
+    }
+});
+
+document.getElementById('registerForm')?.addEventListener('submit', async e => {
+    e.preventDefault();
+
+    const name = document.getElementById('name').value;
+    const email = document.getElementById('email').value;
+    const password = document.getElementById('password').value;
+    const messageDiv = document.getElementById('registerMessage');
+
+    try {
+        const response = await fetch('/api/v1/auth/register', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name, email, password }),
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+            messageDiv.innerHTML = `
+                <p style="color: #00ff00;">Регистрация успешна!</p>
+                <p style="margin-top: 0.5rem;"><a href="/login" style="color: #ff0000;">Перейти к входу</a></p>
+            `;
+            document.getElementById('registerForm').reset();
+        } else {
+            messageDiv.innerHTML = `<p style="color: #ff0000;">${data.message}</p>`;
+        }
+    } catch (error) {
+        messageDiv.innerHTML =
+            '<p style="color: #ff0000;">Ошибка соединения</p>';
+    }
+});
+
+async function addUser() {
+    const name = document.getElementById('userName')?.value;
+    const email = document.getElementById('userEmail')?.value;
+
+    if (!name || !email) {
+        showMessage('Заполните все поля', 'error');
+        return;
+    }
+
+    if (!isAuthenticated()) {
+        showMessage('Войдите в систему', 'error');
+        return;
+    }
+
+    try {
+        const response = await fetch('/api/v1/users', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                Authorization: `Bearer ${getToken()}`,
+            },
+            body: JSON.stringify({ name, email }),
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+            showMessage('Пользователь добавлен!', 'success');
+            document.getElementById('userName').value = '';
+            document.getElementById('userEmail').value = '';
+            setTimeout(() => location.reload(), 1000);
+        } else {
+            showMessage(`${data.message}`, 'error');
+        }
+    } catch (err) {
+        showMessage('Ошибка соединения', 'error');
+    }
+}
+
+async function deleteUser(id) {
+    if (!isAuthenticated()) {
+        alert('Войдите в систему');
+        return;
+    }
+
+    if (!confirm('Удалить пользователя?')) return;
+
+    try {
+        const response = await fetch(`/api/v1/users/${id}`, {
+            method: 'DELETE',
+            headers: {
+                Authorization: `Bearer ${getToken()}`,
+            },
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+            alert('Пользователь удален');
+            location.reload();
+        } else {
+            alert(`${data.message}`);
+        }
+    } catch (error) {
+        alert('Ошибка при удалении');
+    }
+}
+
+async function refreshUsers() {
+    if (!isAuthenticated()) {
+        alert('Войдите в систему');
+        return;
+    }
+
+    try {
+        const response = await fetch('/api/v1/users', {
+            headers: {
+                Authorization: `Bearer ${getToken()}`,
+            },
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+            renderUsers(data.data);
+            const countSpan = document.getElementById('userCount');
+            if (countSpan) countSpan.textContent = data.count;
+        }
+    } catch (err) {
+        console.error('Ошибка обновления:', err);
+        showMessage('Ошибка при обновлении', 'error');
+    }
+}
+
+function renderUsers(users) {
+    const tbody = document.getElementById('usersBody');
+    if (!tbody) return;
+
+    if (!users || users.length === 0) {
+        tbody.innerHTML =
+            '<tr><td colspan="5" style="text-align:center;">Нет пользователей</td></tr>';
+        return;
+    }
+
+    tbody.innerHTML = users
+        .map(
+            user => `
+        <tr>
+            <td>${user._id || user.id}</td>
+            <td>${escapeHtml(user.name)}</td>
+            <td>${escapeHtml(user.email)}</td>
+            <td>${user.createdAt ? new Date(user.createdAt).toLocaleString('ru-RU') : '—'}</td>
+            <td>
+                <button class="btn-delete" onclick="deleteUser('${user._id || user.id}')">Удалить</button>
+            </td>
+        </tr>
+    `
+        )
+        .join('');
+}
+
+function initContactForm() {
+    const form = document.getElementById('feedbackForm');
+    if (!form) return;
+
+    form.addEventListener('submit', async e => {
+        e.preventDefault();
+        const messageDiv = document.getElementById('formMessage');
+        messageDiv.innerHTML =
+            '<p style="color: #00ff00;">Спасибо! Сообщение отправлено.</p>';
+        form.reset();
+        setTimeout(() => {
+            messageDiv.innerHTML = '';
+        }, 3000);
+    });
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    initContactForm();
+
+    const addUserForm = document.getElementById('addUserForm');
+    if (addUserForm) {
+        addUserForm.addEventListener('submit', async e => {
+            e.preventDefault();
+            await addUser();
+        });
+    }
+
+    const usersBody = document.getElementById('usersBody');
+    if (usersBody && !isAuthenticated()) {
+        const addForm = document.getElementById('addUserForm');
+        if (addForm) addForm.style.display = 'none';
+        document
+            .querySelector('.users-section')
+            ?.insertAdjacentHTML(
+                'afterbegin',
+                '<p style="color: #ff0000; text-align: center; padding: 1rem;">Для управления пользователями <a href="/login" style="color: #ff0000;">войдите в систему</a></p>'
+            );
+    }
+});
+
+========== ./public/css/style.css ==========
+/*
+
+        МЕНЯ ТОРКНУЛО ИСП ИИ ДЛЯ ГЕНЕРАЦИИ ПРОСТО ПРИКОЛЬНОГО ДИЗАЙНА ИЗВИНЯЮСЬ
+
+*/
+/* Цвета: Чёрный #000000, Красный #ff0000, Белый #ffffff */
+
+@import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap');
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    background: #000000;
+    color: #ffffff;
+    font-family: 'Share Tech Mono', 'Courier New', monospace;
+    line-height: 1.6;
+    position: relative;
+}
+
+/* Глитч-эффект на заднем фоне */
+body::before {
+    content: '';
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: repeating-linear-gradient(
+        0deg,
+        rgba(255, 0, 0, 0.03) 0px,
+        rgba(255, 0, 0, 0.03) 2px,
+        transparent 2px,
+        transparent 6px
+    );
+    pointer-events: none;
+    z-index: 999;
+}
+
+.container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 20px;
+}
+
+/* ========== НАВИГАЦИЯ ========== */
+.navbar {
+    background: #000000;
+    border-bottom: 2px solid #ff0000;
+    padding: 1rem 0;
+    position: sticky;
+    top: 0;
+    z-index: 1000;
+    box-shadow: 0 0 20px rgba(255, 0, 0, 0.3);
+}
+
+.navbar .container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.nav-brand a {
+    color: #ff0000;
+    text-decoration: none;
+    font-size: 1.8rem;
+    font-weight: bold;
+    text-transform: uppercase;
+    letter-spacing: 3px;
+    text-shadow: 0 0 10px #ff0000;
+    transition: all 0.3s;
+}
+
+.nav-brand a:hover {
+    text-shadow: 0 0 20px #ff0000;
+    letter-spacing: 5px;
+}
+
+.nav-menu {
+    display: flex;
+    list-style: none;
+    gap: 1.5rem;
+    flex-wrap: wrap;
+}
+
+.nav-menu a {
+    color: #ffffff;
+    text-decoration: none;
+    padding: 0.5rem 1rem;
+    border: 1px solid #ff0000;
+    transition: all 0.3s;
+    text-transform: uppercase;
+    font-size: 0.9rem;
+}
+
+.nav-menu a:hover,
+.nav-menu a.active {
+    background: #ff0000;
+    color: #000000;
+    box-shadow: 0 0 15px #ff0000;
+    text-shadow: none;
+}
+
+/* ========== ГЛАВНЫЙ ЭКРАН (HERO) ========== */
+.hero {
+    text-align: center;
+    padding: 4rem 2rem;
+    border: 2px solid #ff0000;
+    margin: 2rem 0;
+    background: linear-gradient(135deg, #0a0a0a 0%, #000000 100%);
+    position: relative;
+    overflow: hidden;
+}
+
+.hero::before {
+    content: '>';
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    color: #ff0000;
+    font-size: 2rem;
+    opacity: 0.5;
+}
+
+.hero::after {
+    content: '<';
+    position: absolute;
+    bottom: 10px;
+    right: 10px;
+    color: #ff0000;
+    font-size: 2rem;
+    opacity: 0.5;
+}
+
+.hero h1 {
+    font-size: 3rem;
+    color: #ff0000;
+    text-shadow: 0 0 15px #ff0000;
+    margin-bottom: 1rem;
+    text-transform: uppercase;
+    letter-spacing: 5px;
+}
+
+.lead {
+    font-size: 1.2rem;
+    margin-bottom: 2rem;
+    color: #cccccc;
+}
+
+/* ========== КНОПКИ ========== */
+.btn {
+    display: inline-block;
+    padding: 0.75rem 2rem;
+    border: none;
+    font-size: 1rem;
+    cursor: pointer;
+    text-decoration: none;
+    text-transform: uppercase;
+    font-family: 'Share Tech Mono', monospace;
+    font-weight: bold;
+    transition: all 0.3s;
+}
+
+.btn-primary {
+    background: #ff0000;
+    color: #000000;
+    border: 1px solid #ff0000;
+}
+
+.btn-primary:hover {
+    background: #000000;
+    color: #ff0000;
+    box-shadow: 0 0 20px #ff0000;
+    transform: scale(1.05);
+}
+
+.btn-secondary {
+    background: transparent;
+    color: #ffffff;
+    border: 1px solid #ff0000;
+}
+
+.btn-secondary:hover {
+    background: #ff0000;
+    color: #000000;
+    box-shadow: 0 0 15px #ff0000;
+}
+
+.btn-block {
+    display: block;
+    width: 100%;
+}
+
+/* ========== КАРТОЧКИ (FEATURES) ========== */
+.features {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 2rem;
+    margin: 3rem 0;
+}
+
+.feature-card {
+    background: #0a0a0a;
+    border: 1px solid #ff0000;
+    padding: 2rem;
+    text-align: center;
+    transition: all 0.3s;
+    position: relative;
+}
+
+.feature-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 0 30px rgba(255, 0, 0, 0.3);
+    border-width: 2px;
+}
+
+.feature-icon {
+    font-size: 3rem;
+    margin-bottom: 1rem;
+    filter: drop-shadow(0 0 5px #ff0000);
+}
+
+.feature-card h3 {
+    color: #ff0000;
+    margin-bottom: 1rem;
+    text-transform: uppercase;
+}
+
+/* ========== ТЕХНОЛОГИИ ========== */
+.tech-stack {
+    background: #0a0a0a;
+    border: 1px solid #ff0000;
+    padding: 2rem;
+    text-align: center;
+    margin-top: 2rem;
+}
+
+.tech-badges {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 1rem;
+    margin-top: 1rem;
+}
+
+.badge {
+    background: transparent;
+    border: 1px solid #ff0000;
+    color: #ff0000;
+    padding: 0.5rem 1rem;
+    text-transform: uppercase;
+    font-size: 0.8rem;
+    transition: all 0.3s;
+}
+
+.badge:hover {
+    background: #ff0000;
+    color: #000000;
+    box-shadow: 0 0 10px #ff0000;
+}
+
+/* ========== ЗАГОЛОВКИ СТРАНИЦ ========== */
+.page-header {
+    text-align: center;
+    margin-bottom: 3rem;
+    border-bottom: 1px solid #ff0000;
+    padding-bottom: 1rem;
+}
+
+.page-header h1 {
+    font-size: 2.5rem;
+    color: #ff0000;
+    text-shadow: 0 0 10px #ff0000;
+    text-transform: uppercase;
+}
+
+/* ========== ФОРМЫ ========== */
+.form-group {
+    margin-bottom: 1.5rem;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 0.5rem;
+    color: #ff0000;
+    text-transform: uppercase;
+    font-size: 0.9rem;
+}
+
+.form-group input,
+.form-group textarea {
+    width: 100%;
+    padding: 0.75rem;
+    background: #111111;
+    border: 1px solid #ff0000;
+    color: #ffffff;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 1rem;
+}
+
+.form-group input:focus,
+.form-group textarea:focus {
+    outline: none;
+    box-shadow: 0 0 10px #ff0000;
+    background: #000000;
+}
+
+/* ========== ТАБЛИЦА ПОЛЬЗОВАТЕЛЕЙ ========== */
+.users-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 1rem;
+}
+
+.users-table th,
+.users-table td {
+    padding: 1rem;
+    text-align: left;
+    border-bottom: 1px solid #ff0000;
+}
+
+.users-table th {
+    color: #ff0000;
+    text-transform: uppercase;
+    font-weight: normal;
+    letter-spacing: 2px;
+}
+
+.users-table tr:hover {
+    background: rgba(255, 0, 0, 0.1);
+}
+
+.btn-delete {
+    background: transparent;
+    border: 1px solid #ff0000;
+    color: #ff0000;
+    padding: 0.25rem 0.75rem;
+    cursor: pointer;
+    font-family: 'Share Tech Mono', monospace;
+    transition: all 0.3s;
+}
+
+.btn-delete:hover {
+    background: #ff0000;
+    color: #000000;
+    box-shadow: 0 0 10px #ff0000;
+}
+
+/* ========== КОНТАКТНАЯ ИНФОРМАЦИЯ ========== */
+.info-card {
+    background: #0a0a0a;
+    border: 1px solid #ff0000;
+    padding: 1.5rem;
+    text-align: center;
+    transition: all 0.3s;
+}
+
+.info-card:hover {
+    box-shadow: 0 0 20px rgba(255, 0, 0, 0.3);
+}
+
+.info-icon {
+    font-size: 2rem;
+    margin-bottom: 1rem;
+}
+
+/* ========== ЛОГИН БОКС ========== */
+.login-container {
+    background: #0a0a0a;
+    border: 2px solid #ff0000;
+    padding: 2rem;
+    max-width: 400px;
+    width: 100%;
+    box-shadow: 0 0 30px rgba(255, 0, 0, 0.2);
+}
+
+.login-header h2 {
+    color: #ff0000;
+    text-transform: uppercase;
+    text-align: center;
+}
+
+/* ========== ФУТЕР ========== */
+.footer {
+    background: #000000;
+    border-top: 1px solid #ff0000;
+    text-align: center;
+    padding: 2rem 0;
+    margin-top: 3rem;
+    color: #666666;
+}
+
+/* ========== АНИМАЦИИ ========== */
+@keyframes glitch {
+    0% {
+        text-shadow:
+            -2px 0 #ff0000,
+            2px 0 #ffffff;
+    }
+    50% {
+        text-shadow:
+            2px 0 #ff0000,
+            -2px 0 #ffffff;
+    }
+    100% {
+        text-shadow:
+            -2px 0 #ff0000,
+            2px 0 #ffffff;
+    }
+}
+
+.hero h1:hover {
+    animation: glitch 0.3s infinite;
+}
+
+/* ========== АДАПТИВНОСТЬ ========== */
+@media (max-width: 768px) {
+    .navbar .container {
+        flex-direction: column;
+        gap: 1rem;
+    }
+
+    .nav-menu {
+        justify-content: center;
+    }
+
+    .hero h1 {
+        font-size: 2rem;
+    }
+
+    .features {
+        grid-template-columns: 1fr;
+    }
+}
+
+========== ./.env.example ==========
+PORT=3000
+HOST=localhost
+NODE_ENV=development
+LOG_LEVEL=info
+
+MONGO_URI=mongodb://127.0.0.1:27017/myapp
+
+JWT_SECRET=change_me_to_a_long_random_string
+JWT_EXPIRES_IN=7d
+
+SESSION_SECRET=change_me_session_secret
+SESSION_MAX_AGE=86400000
+
+BCRYPT_SALT_ROUNDS=10
+
+CSRF_SECRET=change_me_csrf_secret
+
+CORS_ORIGIN=http://localhost:3000
+
+AUTH_RATE_LIMIT_WINDOW_MS=900000
+AUTH_RATE_LIMIT_MAX=10
+
+MAX_LOGIN_ATTEMPTS=5
+LOCK_TIME_MS=900000
+
+GOOGLE_CLIENT_ID=
+GOOGLE_CLIENT_SECRET=
+GOOGLE_CALLBACK_URL=http://localhost:3000/api/v1/auth/google/callback
+
