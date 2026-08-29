@@ -120,26 +120,6 @@
             </div>
         </footer>
 
-        <script>
-            document
-                .getElementById('feedbackForm')
-                .addEventListener('submit', async e => {
-                    e.preventDefault();
-                    const formData = {
-                        name: document.getElementById('name').value,
-                        email: document.getElementById('email').value,
-                        message: document.getElementById('message').value,
-                    };
-
-                    const messageDiv = document.getElementById('formMessage');
-                    messageDiv.innerHTML =
-                        '<p class="success">Спасибо! Ваше сообщение отправлено.</p>';
-                    e.target.reset();
-
-                    setTimeout(() => {
-                        messageDiv.innerHTML = '';
-                    }, 3000);
-                });
-        </script>
+        <script src="/public/js/contact.js"></script>
     </body>
 </html>

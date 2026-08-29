@@ -23,10 +23,14 @@ passport.use(
                         message: 'Неверный email или пароль',
                     });
                 }
-
+                if (!user.isActive) {
+                    return done(null, false, {
+                        message: 'Аккаунт заблокирован',
+                    });
+                }
                 if (user.lockUntil && user.lockUntil > Date.now()) {
                     const minutes = Math.ceil(
-                        (user.lockUntil - Date.now()) / 60000
+                        (user.lockUntil - Date.now()) / 60000,
                     );
                     return done(null, false, {
                         message: `Аккаунт временно заблокирован. Попробуйте через ${minutes} мин.`,
@@ -50,8 +54,8 @@ passport.use(
             } catch (err) {
                 return done(err);
             }
-        }
-    )
+        },
+    ),
 );
 
 passport.use(
@@ -70,8 +74,8 @@ passport.use(
             } catch (err) {
                 return done(err, false);
             }
-        }
-    )
+        },
+    ),
 );
 
 if (config.GOOGLE_CLIENT_ID && config.GOOGLE_CLIENT_SECRET) {
@@ -81,39 +85,58 @@ if (config.GOOGLE_CLIENT_ID && config.GOOGLE_CLIENT_SECRET) {
                 clientID: config.GOOGLE_CLIENT_ID,
                 clientSecret: config.GOOGLE_CLIENT_SECRET,
                 callbackURL: config.GOOGLE_CALLBACK_URL,
+                passReqToCallback: true,
             },
-            async (accessToken, refreshToken, profile, done) => {
+            async (req, accessToken, refreshToken, profile, done) => {
                 try {
-                    let user = await User.findOne({ googleId: profile.id });
+                    const email = profile.emails?.[0]?.value?.toLowerCase();
+                    const displayName = profile.displayName || 'Google User';
 
-                    if (!user) {
-                        const email = profile.emails?.[0]?.value?.toLowerCase();
-                        user = await User.findOne({ email });
-
-                        if (user) {
-                            user.googleId = profile.id;
-                            await user.save();
-                        } else {
-                            user = await User.create({
-                                name: profile.displayName,
-                                email,
-                                googleId: profile.id,
-                                password: undefined,
-                                role: 'user',
-                            });
-                        }
+                    if (!email) {
+                        logger.warn('Google OAuth: no email provided');
+                        return done(null, false, { message: 'Email не получен от Google' });
                     }
 
+                    let user = await User.findOne({ googleId: profile.id });
+
+                    if (user) {
+                        if (!user.isActive) {
+                            return done(null, false, { message: 'Аккаунт деактивирован' });
+                        }
+                        logger.info(`Google OAuth: existing user ${user.email}`);
+                        return done(null, user);
+                    }
+
+                    user = await User.findOne({ email });
+
+                    if (user) {
+                        user.googleId = profile.id;
+                        await user.save();
+                        logger.info(`Google OAuth: linked Google ID to existing user ${user.email}`);
+                        return done(null, user);
+                    }
+
+                    user = await User.create({
+                        name: displayName,
+                        email: email,
+                        googleId: profile.id,
+                        password: null,
+                        role: 'user',
+                        isActive: true,
+                    });
+
+                    logger.info(`Google OAuth: created new user ${user.email}`);
                     return done(null, user);
                 } catch (err) {
+                    logger.error(`Google OAuth strategy error: ${err.message}`);
                     return done(err, null);
                 }
-            }
-        )
+            },
+        ),
     );
     logger.info('Google OAuth стратегия подключена');
 } else {
-    logger.info('Google OAuth не настроен (нет CLIENT_ID/SECRET в .env)');
+    logger.warn('Google OAuth не настроен (нет CLIENT_ID/SECRET в .env)');
 }
 
 passport.serializeUser((user, done) => {

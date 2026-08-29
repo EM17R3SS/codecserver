@@ -29,9 +29,11 @@ app.use(helmetMiddleware);
 //CORS
 app.use(
     cors({
-        origin: config.CORS_ORIGIN,
+        origin: process.env.NODE_ENV === 'production'
+            ? process.env.CORS_ORIGIN
+            : ['http://localhost:3000'],
         credentials: true,
-    })
+    }),
 );
 
 //Общий rate limiter
@@ -71,7 +73,7 @@ app.use(
             sameSite: 'lax',
             maxAge: config.SESSION_MAX_AGE,
         },
-    })
+    }),
 );
 app.use(passport.initialize());
 app.use(passport.session());

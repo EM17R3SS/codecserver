@@ -1,5 +1,11 @@
 function ensureAuthenticated(req, res, next) {
     if (req.isAuthenticated && req.isAuthenticated()) {
+        if (!req.user.isActive) {
+            return res.status(403).json({
+                success: false,
+                message: 'Аккаунт неактивен',
+            });
+        }
         return next();
     }
     return res.redirect('/login');
@@ -17,11 +23,14 @@ function ensureRole(...roles) {
         if (!req.isAuthenticated || !req.isAuthenticated()) {
             return res.redirect('/login');
         }
-        if (!roles.includes(req.user.role)) {
-            return res.status(403).render('error', {
-                title: 'Доступ запрещён',
-                message: 'У вас недостаточно прав для просмотра этой страницы',
+        if (!req.user.isActive) {
+            return res.status(403).json({
+                success: false,
+                message: 'Аккаунт неактивен',
             });
+        }
+        if (!roles.includes(req.user.role)) {
+            return res.redirect('/');
         }
         next();
     };

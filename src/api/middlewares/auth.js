@@ -9,6 +9,12 @@ const auth = (req, res, next) => {
                 message: 'Требуется авторизация (неверный или отсутствующий токен)',
             });
         }
+        if (!user.isActive) {
+            return res.status(403).json({
+                success: false,
+                message: 'Аккаунт неактивен',
+            });
+        }
         req.user = user;
         next();
     })(req, res, next);

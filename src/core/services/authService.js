@@ -10,7 +10,7 @@ class AuthService {
         const existing = await User.findOne({ email: normalizedEmail });
         if (existing) {
             throw ApiError.badRequest(
-                'Пользователь с таким Email уже существует'
+                'Пользователь с таким Email уже существует',
             );
         }
 
@@ -20,6 +20,7 @@ class AuthService {
             email: normalizedEmail,
             password: hashedPassword,
             role: 'user',
+            isActive: true,
         });
 
         const token = generateToken({
@@ -28,24 +29,21 @@ class AuthService {
             role: user.role,
         });
 
-        const userWithoutPassword = user.toObject();
-        delete userWithoutPassword.password;
-
-        return { user: userWithoutPassword, token };
+        return { user: user.toJSON(), token };
     }
 
     async login(email, password, config) {
         const normalizedEmail = email.toLowerCase().trim();
         const user = await User.findOne({ email: normalizedEmail }).select(
-            '+password +failedLoginAttempts +lockUntil'
+            '+password +failedLoginAttempts +lockUntil',
         );
 
         if (!user) throw ApiError.unauthorized('Неверный email или пароль');
-
+        if (!user.isActive) throw ApiError.unauthorized('Аккаунт заблокирован');
         if (user.lockUntil && user.lockUntil > Date.now()) {
             const minutes = Math.ceil((user.lockUntil - Date.now()) / 60000);
             throw ApiError.tooManyRequests(
-                `Аккаунт заблокирован. Попробуйте через ${minutes} мин.`
+                `Аккаунт заблокирован. Попробуйте через ${minutes} мин.`,
             );
         }
 
@@ -67,10 +65,7 @@ class AuthService {
             role: user.role,
         });
 
-        const userWithoutPassword = user.toObject();
-        delete userWithoutPassword.password;
-
-        return { user: userWithoutPassword, token };
+        return { user: user.toJSON(), token };
     }
 }
 

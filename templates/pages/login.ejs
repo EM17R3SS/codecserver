@@ -79,42 +79,6 @@
         </div>
     </footer>
 
-    <script>
-        document.getElementById('loginForm').addEventListener('submit', async (e) => {
-            e.preventDefault();
-
-            const email = document.getElementById('email').value;
-            const password = document.getElementById('password').value;
-            const csrfToken = document.querySelector('input[name="_csrf"]').value;
-            const messageDiv = document.getElementById('loginMessage');
-
-            try {
-                // Сессионный вход (cookie), защищён CSRF-токеном
-                const response = await fetch('/api/v1/auth/session-login', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'x-csrf-token': csrfToken,
-                    },
-                    credentials: 'include',
-                    body: JSON.stringify({ email, password, _csrf: csrfToken }),
-                });
-
-                const data = await response.json();
-
-                if (data.success) {
-                    messageDiv.textContent = 'Вход выполнен! Перенаправление...';
-                    messageDiv.style.color = '#00ff00';
-                    setTimeout(() => (window.location.href = '/'), 800);
-                } else {
-                    messageDiv.textContent = data.message;
-                    messageDiv.style.color = '#ff0000';
-                }
-            } catch (err) {
-                messageDiv.textContent = 'Ошибка соединения';
-                messageDiv.style.color = '#ff0000';
-            }
-        });
-    </script>
+    <script src="/public/js/auth.js"></script>
 </body>
 </html>

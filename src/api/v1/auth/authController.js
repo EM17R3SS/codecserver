@@ -17,7 +17,7 @@ const login = catchAsync(async (req, res, next) => {
         const { user, token } = await authService.login(
             email,
             password,
-            config
+            config,
         );
         logger.auth(user._id, 'login_jwt', true);
         res.json({ success: true, data: { user, token } });
@@ -37,12 +37,16 @@ const sessionLogin = (req, res, next) => {
                 message: info?.message || 'Неверный email или пароль',
             });
         }
+        if (!user.isActive) {
+            return res.status(403).json({
+                success: false,
+                message: 'Аккаунт неактивен',
+            });
+        }
         req.login(user, loginErr => {
             if (loginErr) return next(loginErr);
             logger.auth(user._id, 'login_session', true);
-            const userSafe = user.toObject();
-            delete userSafe.password;
-            res.json({ success: true, data: { user: userSafe } });
+            res.json({ success: true, data: { user: user.toJSON() } });
         });
     })(req, res, next);
 };
@@ -69,18 +73,39 @@ const getSessionInfo = (req, res) => {
 
 const googleAuth = passport.authenticate('google', {
     scope: ['profile', 'email'],
+    prompt: 'select_account',
 });
 
+
 const googleCallback = (req, res, next) => {
-    passport.authenticate('google', { failureRedirect: '/login' }, err => {
-        if (err) return next(err);
-        req.login(req.user, loginErr => {
-            if (loginErr) return next(loginErr);
-            logger.auth(req.user._id, 'login_google', true);
-            res.redirect('/');
+    passport.authenticate('google', { failureRedirect: '/login' }, (err, user, info) => {
+        if (err) {
+            logger.error(`Google OAuth error: ${err.message}`);
+            return res.redirect('/login?error=oauth_error');
+        }
+
+        if (!user) {
+            logger.warn(`Google OAuth failed: ${info?.message || 'Unknown error'}`);
+            return res.redirect('/login?error=oauth_failed');
+        }
+
+        if (!user.isActive) {
+            logger.auth(user._id, 'login_google', false);
+            return res.redirect('/login?error=account_deactivated');
+        }
+
+        req.login(user, (loginErr) => {
+            if (loginErr) {
+                logger.error(`Google OAuth login error: ${loginErr.message}`);
+                return res.redirect('/login?error=login_error');
+            }
+
+            logger.auth(user._id, 'login_google', true);
+            return res.redirect('/');
         });
     })(req, res, next);
 };
+
 
 module.exports = {
     register,

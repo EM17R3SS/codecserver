@@ -8,7 +8,11 @@ function generateToken(payload) {
 }
 
 function verifyToken(token) {
-    return jwt.verify(token, config.JWT_SECRET);
+    try {
+        return jwt.verify(token, config.JWT_SECRET);
+    } catch (err) {
+        throw new Error('Invalid token');
+    }
 }
 
 module.exports = { generateToken, verifyToken };

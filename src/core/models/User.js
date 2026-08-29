@@ -21,7 +21,10 @@ const userSchema = new mongoose.Schema(
         password: {
             type: String,
             minlength: [8, 'Пароль должен быть минимум 8 символов'],
-            select: false,
+            required: function() {
+                return !this.googleId || this.googleId === null;
+            },
+            default: null,
         },
         role: {
             type: String,
@@ -49,10 +52,29 @@ const userSchema = new mongoose.Schema(
     },
     {
         timestamps: true,
-    }
+    },
 );
 
-userSchema.methods.incrementLoginAttempts = async function (config) {
+userSchema.set('toJSON', {
+    transform: (doc, ret) => {
+        delete ret.password;
+        delete ret.failedLoginAttempts;
+        delete ret.lockUntil;
+        delete ret.__v;
+        return ret;
+    },
+});
+userSchema.set('toObject', {
+    transform: (doc, ret) => {
+        delete ret.password;
+        delete ret.failedLoginAttempts;
+        delete ret.lockUntil;
+        delete ret.__v;
+        return ret;
+    },
+});
+
+userSchema.methods.incrementLoginAttempts = async function(config) {
     this.failedLoginAttempts += 1;
 
     if (this.failedLoginAttempts >= config.MAX_LOGIN_ATTEMPTS) {
@@ -62,10 +84,14 @@ userSchema.methods.incrementLoginAttempts = async function (config) {
     await this.save({ validateBeforeSave: false });
 };
 
-userSchema.methods.resetLoginAttempts = async function () {
+userSchema.methods.resetLoginAttempts = async function() {
     this.failedLoginAttempts = 0;
     this.lockUntil = null;
     await this.save({ validateBeforeSave: false });
+};
+
+userSchema.methods.checkIsActive = function() {
+    return this.isActive === true;
 };
 
 module.exports = mongoose.model('User', userSchema);

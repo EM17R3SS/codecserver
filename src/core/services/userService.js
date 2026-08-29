@@ -23,7 +23,7 @@ class UserService {
         const existing = await userRepository.findByEmail(normalizedEmail);
         if (existing) {
             throw ApiError.badRequest(
-                'Пользователь с таким Email уже существует'
+                'Пользователь с таким Email уже существует',
             );
         }
 
@@ -44,7 +44,7 @@ class UserService {
                     await userRepository.findByEmail(normalizedEmail);
                 if (existing) {
                     throw ApiError.badRequest(
-                        'Пользователь с таким Email уже существует'
+                        'Пользователь с таким Email уже существует',
                     );
                 }
             }

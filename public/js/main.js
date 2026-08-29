@@ -38,25 +38,44 @@ function showMessage(message, type, elementId = 'addUserMessage') {
 async function addUser() {
     const name = document.getElementById('userName')?.value;
     const email = document.getElementById('userEmail')?.value;
+    const password = document.getElementById('userPassword')?.value;
 
     if (!name || !email) {
         showMessage('Заполните все поля', 'error');
         return;
     }
 
-    if (!isAuthenticated()) {
-        showMessage('Войдите в систему', 'error');
-        return;
+    const token = getToken();
+    if (!token) {
+        try {
+            const response = await fetch('/api/v1/auth/session', {
+                credentials: 'include',
+            });
+            const data = await response.json();
+            if (!data.authenticated) {
+                showMessage('Войдите в систему', 'error');
+                return;
+            }
+        } catch {
+            showMessage('Войдите в систему', 'error');
+            return;
+        }
     }
 
     try {
+        const headers = {
+            'Content-Type': 'application/json',
+        };
+
+        if (token) {
+            headers.Authorization = `Bearer ${token}`;
+        }
+
         const response = await fetch('/api/v1/users', {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                Authorization: `Bearer ${getToken()}`,
-            },
-            body: JSON.stringify({ name, email }),
+            headers,
+            credentials: token ? undefined : 'include',
+            body: JSON.stringify({ name, email, password }),
         });
 
         const data = await response.json();
@@ -82,12 +101,18 @@ async function deleteUser(id) {
 
     if (!confirm('Удалить пользователя?')) return;
 
+    const token = getToken();
     try {
+        const headers = {};
+
+        if (token) {
+            headers.Authorization = `Bearer ${token}`;
+        }
+
         const response = await fetch(`/api/v1/users/${id}`, {
             method: 'DELETE',
-            headers: {
-                Authorization: `Bearer ${getToken()}`,
-            },
+            headers,
+            credentials: token ? undefined : 'include',
         });
 
         const data = await response.json();
@@ -104,16 +129,34 @@ async function deleteUser(id) {
 }
 
 async function refreshUsers() {
-    if (!isAuthenticated()) {
-        alert('Войдите в систему');
-        return;
+    const token = getToken();
+    if (!token) {
+        try {
+            const sessionCheck = await fetch('/api/v1/auth/session', {
+                credentials: 'include',
+            });
+            const sessionData = await sessionCheck.json();
+            if (!sessionData.authenticated) {
+                alert('Войдите в систему');
+                return;
+            }
+        } catch {
+            alert('Войдите в систему');
+            return;
+        }
     }
 
     try {
+        const headers = {};
+
+        if (token) {
+            headers.Authorization = `Bearer ${token}`;
+        }
+
         const response = await fetch('/api/v1/users', {
-            headers: {
-                Authorization: `Bearer ${getToken()}`,
-            },
+            method: 'GET',
+            headers,
+            credentials: token ? undefined : 'include',
         });
 
         const data = await response.json();
@@ -134,43 +177,38 @@ function renderUsers(users) {
     if (!tbody) return;
 
     if (!users || users.length === 0) {
-        tbody.innerHTML =
-            '<tr><td colspan="5" style="text-align:center;">Нет пользователей</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;">Нет пользователей</td></tr>';
         return;
     }
 
-    tbody.innerHTML = users
-        .map(
-            user => `
+    tbody.innerHTML = users.map(user => `
         <tr>
-            <td>${user._id || user.id}</td>
+            <td>${escapeHtml(user._id || user.id)}</td>
             <td>${escapeHtml(user.name)}</td>
             <td>${escapeHtml(user.email)}</td>
             <td>${user.createdAt ? new Date(user.createdAt).toLocaleString('ru-RU') : '—'}</td>
             <td>
-                <button class="btn-delete" onclick="deleteUser('${user._id || user.id}')">Удалить</button>
+                <button class="btn-delete" onclick="deleteUser('${escapeHtml(user._id || user.id)}')">Удалить</button>
             </td>
         </tr>
-    `
-        )
-        .join('');
+    `).join('');
 }
 
-function initContactForm() {
-    const form = document.getElementById('feedbackForm');
-    if (!form) return;
+// function initContactForm() {
+//     const form = document.getElementById('feedbackForm');
+//     if (!form) return;
 
-    form.addEventListener('submit', async e => {
-        e.preventDefault();
-        const messageDiv = document.getElementById('formMessage');
-        messageDiv.innerHTML =
-            '<p style="color: #00ff00;">Спасибо! Сообщение отправлено.</p>';
-        form.reset();
-        setTimeout(() => {
-            messageDiv.innerHTML = '';
-        }, 3000);
-    });
-}
+//     form.addEventListener('submit', async e => {
+//         e.preventDefault();
+//         const messageDiv = document.getElementById('formMessage');
+//         messageDiv.textContent = 'Спасибо! Сообщение отправлено.';
+//         messageDiv.style.color = '#00ff00';
+//         form.reset();
+//         setTimeout(() => {
+//             messageDiv.textContent = '';
+//         }, 3000);
+//     });
+// }
 
 document.addEventListener('DOMContentLoaded', () => {
     initContactForm();
@@ -183,15 +221,31 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    if (document.getElementById('usersBody')) {
+        refreshUsers();
+    }
+
     const usersBody = document.getElementById('usersBody');
-    if (usersBody && !isAuthenticated()) {
-        const addForm = document.getElementById('addUserForm');
-        if (addForm) addForm.style.display = 'none';
-        document
-            .querySelector('.users-section')
-            ?.insertAdjacentHTML(
-                'afterbegin',
-                '<p style="color: #ff0000; text-align: center; padding: 1rem;">Для управления пользователями <a href="/login" style="color: #ff0000;">войдите в систему</a></p>'
-            );
+    if (usersBody) {
+        fetch('/api/v1/auth/session', { credentials: 'include' })
+            .then(res => res.json())
+            .then(data => {
+                if (!data.authenticated) {
+                    const addForm = document.getElementById('addUserForm');
+                    if (addForm) addForm.style.display = 'none';
+                    document.querySelector('.users-section')?.insertAdjacentHTML(
+                        'afterbegin',
+                        '<p style="color: #ff0000; text-align: center; padding: 1rem;">Для управления пользователями <a href="/login" style="color: #ff0000;">войдите в систему</a></p>'
+                    );
+                }
+            })
+            .catch(() => {
+                const addForm = document.getElementById('addUserForm');
+                if (addForm) addForm.style.display = 'none';
+                document.querySelector('.users-section')?.insertAdjacentHTML(
+                    'afterbegin',
+                    '<p style="color: #ff0000; text-align: center; padding: 1rem;">Для управления пользователями <a href="/login" style="color: #ff0000;">войдите в систему</a></p>'
+                );
+            });
     }
 });

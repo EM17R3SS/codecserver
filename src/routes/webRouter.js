@@ -40,6 +40,7 @@ router.get('/login', ensureGuest, (req, res) => {
     res.render('login', {
         title: 'Вход в систему',
         csrfToken: res.locals.csrfToken,
+        user: null,
     });
 });
 
@@ -47,6 +48,7 @@ router.get('/register', ensureGuest, (req, res) => {
     res.render('register', {
         title: 'Регистрация',
         csrfToken: res.locals.csrfToken,
+        user: null,
     });
 });
 

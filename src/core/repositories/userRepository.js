@@ -1,9 +1,20 @@
 const User = require('../models/User');
+const AppError = require('../../errors/AppError');
 
 class UserRepository {
     async findAll({ page = 1, limit = 20 } = {}) {
         const skip = (page - 1) * limit;
-        return await User.find().select('-__v').skip(skip).limit(limit);
+        const users = await User.find()
+            .select('-__v')
+            .skip(skip)
+            .limit(limit)
+            .lean();
+        return users.map(user => {
+            delete user.password;
+            delete user.failedLoginAttempts;
+            delete user.lockUntil;
+            return user;
+        });
     }
 
     async count() {
@@ -11,28 +22,47 @@ class UserRepository {
     }
 
     async findById(id) {
-        return await User.findById(id).select('-__v');
+        const user = await User.findById(id).select('-__v').lean();
+        if (!user) return null;
+        delete user.password;
+        delete user.failedLoginAttempts;
+        delete user.lockUntil;
+        return user;
     }
 
     async findByEmail(email) {
-        return await User.findOne({ email: email.toLowerCase().trim() }).select(
-            '-__v'
-        );
+        const user = await User.findOne({ email: email.toLowerCase().trim() })
+            .select('-__v')
+            .lean();
+        if (!user) return null;
+        delete user.password;
+        delete user.failedLoginAttempts;
+        delete user.lockUntil;
+        return user;
     }
 
     async create(userData) {
-        return await User.create(userData);
+        const user = await User.create(userData);
+        return user.toJSON();
     }
 
     async update(id, userData) {
-        return await User.findByIdAndUpdate(id, userData, {
+        const user = await User.findByIdAndUpdate(id, userData, {
             new: true,
             runValidators: true,
         }).select('-__v');
+        if (!user) return null;
+        return user.toJSON();
     }
 
     async delete(id) {
-        return await User.findByIdAndDelete(id);
+        const deletedUser = await User.findByIdAndDelete(id);
+
+        if (!deletedUser) {
+            throw AppError.notFound('User not found');
+        }
+
+        return deletedUser;
     }
 }
 

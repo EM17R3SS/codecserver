@@ -6,12 +6,13 @@ const validate = require('../../middlewares/validate');
 const { registerSchema, loginSchema } = require('./authValidation');
 const { verifyCsrfToken } = require('../../middlewares/csrf');
 const { authLimiter } = require('../../middlewares/rateLimiter');
+const config = require('../../../config/env');
 
 router.post(
     '/register',
     authLimiter,
     validate(registerSchema),
-    controller.register
+    controller.register,
 );
 router.post('/login', authLimiter, validate(loginSchema), controller.login);
 router.post('/logout', controller.logout);
@@ -20,11 +21,10 @@ router.post(
     authLimiter,
     verifyCsrfToken,
     validate(loginSchema),
-    controller.sessionLogin
+    controller.sessionLogin,
 );
 router.get('/session', controller.getSessionInfo);
 
-const config = require('../../../config/env');
 if (config.GOOGLE_CLIENT_ID) {
     router.get('/google', controller.googleAuth);
     router.get('/google/callback', controller.googleCallback);

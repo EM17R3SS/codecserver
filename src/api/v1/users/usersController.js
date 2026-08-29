@@ -28,6 +28,9 @@ const createUser = catchAsync(async (req, res) => {
     const payload = { ...req.body };
     if (payload.password) {
         payload.password = await hashPassword(payload.password);
+    } else {
+        const { generateRandomPassword } = require('../../../lib/utils');
+        payload.password = await hashPassword(generateRandomPassword());
     }
     const user = await userService.createUser(payload);
     logger.info(`Admin ${req.user.email} создал пользователя ${user.email}`);
@@ -37,7 +40,7 @@ const createUser = catchAsync(async (req, res) => {
 const updateUser = catchAsync(async (req, res) => {
     const user = await userService.updateUser(req.params.id, req.body);
     logger.info(
-        `Admin ${req.user.email} обновил пользователя ${req.params.id}`
+        `Admin ${req.user.email} обновил пользователя ${req.params.id}`,
     );
     res.json({ success: true, data: user });
 });

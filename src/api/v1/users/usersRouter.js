@@ -15,13 +15,13 @@ router.post(
     '/',
     rbac('admin'),
     validate(createUserSchema),
-    controller.createUser
+    controller.createUser,
 );
 router.put(
     '/:id',
     rbac('admin'),
     validate(updateUserSchema),
-    controller.updateUser
+    controller.updateUser,
 );
 router.delete('/:id', rbac('admin'), controller.deleteUser);
 

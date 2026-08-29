@@ -24,13 +24,23 @@ function generateCsrfToken(req, res, next) {
 }
 
 function verifyCsrfToken(req, res, next) {
+    if (['GET', 'HEAD', 'OPTIONS'].includes(req.method)) {
+        return next();
+    }
+
     const cookieToken = req.cookies?.[CSRF_COOKIE_NAME];
     const clientToken = req.body?._csrf || req.headers[CSRF_HEADER_NAME];
 
-    if (!cookieToken || !clientToken || cookieToken !== clientToken) {
+    if (!cookieToken || !clientToken) {
         return res.status(403).json({
             success: false,
-            message: 'Недействительный CSRF-токен. Обновите страницу.',
+            message: 'CSRF-токен не найден.',
+        });
+    }
+    if (cookieToken !== clientToken) {
+        return res.status(403).json({
+            success: false,
+            message: 'Недействительный CSRF-токен.',
         });
     }
 
