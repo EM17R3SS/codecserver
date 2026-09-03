@@ -2,9 +2,9 @@ function getToken() {
     return localStorage.getItem('token');
 }
 
-function isAuthenticated() {
-    return !!getToken();
-}
+// function isAuthenticated() {
+//     return !!getToken();
+// }
 
 function logout() {
     localStorage.removeItem('token');
@@ -88,8 +88,8 @@ async function addUser() {
         } else {
             showMessage(`${data.message}`, 'error');
         }
-    } catch (err) {
-        showMessage('Ошибка соединения', 'error');
+    } catch (_err) {
+        showMessage('Ошибка соединения', 'error' + _err);
     }
 }
 
@@ -123,8 +123,8 @@ async function deleteUser(id) {
         } else {
             alert(`${data.message}`);
         }
-    } catch (error) {
-        alert('Ошибка при удалении');
+    } catch (_err) {
+        alert('Ошибка при удалении' + _err);
     }
 }
 
@@ -235,7 +235,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (addForm) addForm.style.display = 'none';
                     document.querySelector('.users-section')?.insertAdjacentHTML(
                         'afterbegin',
-                        '<p style="color: #ff0000; text-align: center; padding: 1rem;">Для управления пользователями <a href="/login" style="color: #ff0000;">войдите в систему</a></p>'
+                        '<p style="color: #ff0000; text-align: center; padding: 1rem;">Для управления пользователями <a href="/login" style="color: #ff0000;">войдите в систему</a></p>',
                     );
                 }
             })
@@ -244,7 +244,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (addForm) addForm.style.display = 'none';
                 document.querySelector('.users-section')?.insertAdjacentHTML(
                     'afterbegin',
-                    '<p style="color: #ff0000; text-align: center; padding: 1rem;">Для управления пользователями <a href="/login" style="color: #ff0000;">войдите в систему</a></p>'
+                    '<p style="color: #ff0000; text-align: center; padding: 1rem;">Для управления пользователями <a href="/login" style="color: #ff0000;">войдите в систему</a></p>',
                 );
             });
     }

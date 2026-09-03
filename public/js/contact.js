@@ -21,7 +21,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const response = await fetch('/api/v1/contact', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ name, email, message })
+                body: JSON.stringify({ name, email, message }),
             });
 
             const data = await response.json();
@@ -36,7 +36,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         } catch (error) {
             if (messageDiv) {
-                messageDiv.innerHTML = '<p style="color: #00ff00;">error!</p>';
+                messageDiv.innerHTML = '<p style="color: #ff0000;">error!</p>';
             }
             console.error('Contact error:', error);
         }

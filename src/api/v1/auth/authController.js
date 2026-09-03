@@ -28,25 +28,42 @@ const login = catchAsync(async (req, res, next) => {
 });
 
 const sessionLogin = (req, res, next) => {
+    const checkForClean = req.headers.accept?.includes('application/json') || req.xhr;
     passport.authenticate('local', (err, user, info) => {
         if (err) return next(err);
         if (!user) {
             logger.auth(req.body.email, 'login_session', false);
-            return res.status(401).json({
-                success: false,
-                message: info?.message || 'Неверный email или пароль',
-            });
+
+            if (checkForClean) {
+                return res.status(401).json({
+                    success: false,
+                    message: info?.message || 'Неверный email или пароль',
+                });
+            }
+            return res.redirect('/login?error=invalid_credentials');
         }
         if (!user.isActive) {
-            return res.status(403).json({
-                success: false,
-                message: 'Аккаунт неактивен',
-            });
+            if (checkForClean) {
+                return res.status(403).json({
+                    success: false,
+                    message: 'Аккаунт неактивен',
+                });
+            }
+            return res.redirect(`/login?${new URLSearchParams({ error: 'Аккаунт неактивен' }).toString()}`);
         }
         req.login(user, loginErr => {
-            if (loginErr) return next(loginErr);
+            if (loginErr) {
+                if (checkForClean) {
+                    return next(loginErr);
+                }
+                return res.redirect('/login?error=login_error');
+            }
             logger.auth(user._id, 'login_session', true);
-            res.json({ success: true, data: { user: user.toJSON() } });
+            if (checkForClean) {
+                res.json({ success: true, data: { user: user.toJSON() } });
+            } else {
+                res.redirect('/');
+            }
         });
     })(req, res, next);
 };

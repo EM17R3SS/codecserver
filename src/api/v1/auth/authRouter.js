@@ -7,6 +7,7 @@ const { registerSchema, loginSchema } = require('./authValidation');
 const { verifyCsrfToken } = require('../../middlewares/csrf');
 const { authLimiter } = require('../../middlewares/rateLimiter');
 const config = require('../../../config/env');
+const authMiddleware = require('../../middlewares/auth');
 
 router.post(
     '/register',
@@ -15,7 +16,7 @@ router.post(
     controller.register,
 );
 router.post('/login', authLimiter, validate(loginSchema), controller.login);
-router.post('/logout', controller.logout);
+router.post('/logout', authMiddleware, controller.logout);
 router.post(
     '/session-login',
     authLimiter,

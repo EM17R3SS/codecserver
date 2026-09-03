@@ -1,7 +1,7 @@
 const User = require('../models/User');
 const { generateToken } = require('../../lib/jwt');
 const { hashPassword } = require('../../lib/password');
-const ApiError = require('../../lib/ApiError');
+const ApiError = require('../../lib/AppError');
 
 class AuthService {
     async register({ name, email, password }) {

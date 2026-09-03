@@ -1,7 +1,7 @@
 const logger = require('../../config/logger');
 const config = require('../../config/env');
 
-function errorHandler(err, req, res, next) {
+function errorHandler(err, req, res, _next) {
     logger.logError(err, req);
 
     let statusCode = err.statusCode || 500;

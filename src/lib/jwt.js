@@ -10,8 +10,8 @@ function generateToken(payload) {
 function verifyToken(token) {
     try {
         return jwt.verify(token, config.JWT_SECRET);
-    } catch (err) {
-        throw new Error('Invalid token');
+    } catch (_err) {
+        throw new Error('Invalid token, ' + _err.message);
     }
 }
 

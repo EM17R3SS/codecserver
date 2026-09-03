@@ -47,6 +47,7 @@ router.patch(
 router.post(
     '/admin/messages/delete-bulk',
     rbac('admin'),
+    validate(bulkDeleteSchema),
     contactController.deleteMessages,
 );
 

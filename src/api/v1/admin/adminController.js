@@ -1,6 +1,6 @@
 const userRepository = require('../../../core/repositories/userRepository');
 const catchAsync = require('../../../lib/catchAsync');
-const ApiError = require('../../../lib/ApiError');
+const ApiError = require('../../../lib/AppError');
 const logger = require('../../../config/logger');
 
 const makeAdmin = catchAsync(async (req, res, next) => {

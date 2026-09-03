@@ -47,7 +47,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const response = await fetch('/api/v1/auth/register', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ name, email, password })
+                    body: JSON.stringify({ name, email, password }),
                 });
 
                 const data = await response.json();
@@ -61,6 +61,9 @@ document.addEventListener('DOMContentLoaded', () => {
                         registerForm.reset();
                     } else {
                         messageDiv.innerHTML = `<p style="color: #ff0000;">${data.message || 'Ошибка регистрации'}</p>`;
+                        if (data.errors && Array.isArray(data.errors)) {
+                            messageDiv.innerHTML += `<ul style="color: #ff0000;">${data.errors.map(e => `<li>${e}</li>`).join('')}</ul>`;
+                        }
                     }
                 }
             } catch (error) {
@@ -79,7 +82,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const email = document.getElementById('email')?.value || '';
             const password = document.getElementById('password')?.value || '';
-            //const csrfToken = document.querySelector('input[name="_csrf"]')?.value || '';
+            const csrfToken = document.querySelector('input[name="_csrf"]')?.value || '';
             const messageDiv = document.getElementById('loginMessage');
 
             if (!email || !password) {
@@ -91,7 +94,8 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             try {
-                const csrfToken = getCookie('csrf_token');
+                //const csrfToken = getCookie('csrf_token');
+                //const csrfToken = document.querySelector('input[name="_csrf"]')?.value || '';
                 const response = await fetch('/api/v1/auth/session-login', {
                     method: 'POST',
                     headers: {
@@ -106,22 +110,19 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 if (messageDiv) {
                     if (data.success) {
-                        localStorage.removeItem('token');
-                        window.history.replaceState({}, document.title, window.location.pathname);
-                        messageDiv.textContent = 'Вход выполнен! Перенаправление...';
-                        messageDiv.style.color = '#00ff00';
-                        setTimeout(() => {
-                            window.location.href = data.redirect || '/users';
-                        }, 800);
+                        window.history.replaceState({}, document.title, '/login');
+                        window.location.href = data.redirect || '/';
                     } else {
                         messageDiv.textContent = data.message || 'Ошибка входа';
                         messageDiv.style.color = '#ff0000';
+                        window.history.replaceState({}, document.title, '/login');
                     }
                 }
             } catch (error) {
                 if (messageDiv) {
                     messageDiv.textContent = 'Ошибка соединения';
                     messageDiv.style.color = '#ff0000';
+                    window.history.replaceState({}, document.title, '/login');
                 }
                 console.error('Login error:', error);
             }
@@ -139,13 +140,18 @@ document.addEventListener('DOMContentLoaded', () => {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
-                        ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+                        ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
                     },
-                    credentials: 'include'
+                    credentials: 'include',
                 });
-
-                localStorage.removeItem('token');
-                window.location.href = '/login';
+                if (response.ok) {
+                    localStorage.removeItem('token');
+                    window.location.href = '/login';
+                } else {
+                    console.error('Logout failed:', response.status);
+                    localStorage.removeItem('token');
+                    window.location.href = '/login';
+                }
             } catch (error) {
                 localStorage.removeItem('token');
                 window.location.href = '/login';
@@ -155,12 +161,12 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
 
-    function getCookie(name) {
-        const value = `; ${document.cookie}`;
-        const parts = value.split(`; ${name}=`);
-        if (parts.length === 2) return parts.pop().split(';').shift();
-        return '';
-    }
+    // function getCookie(name) {
+    //     const value = `; ${document.cookie}`;
+    //     const parts = value.split(`; ${name}=`);
+    //     if (parts.length === 2) return parts.pop().split(';').shift();
+    //     return '';
+    // }
 
     window.isAuthenticated = () => {
         return !!localStorage.getItem('token');

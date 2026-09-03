@@ -1,44 +1,34 @@
 {
     "info": {
-        "name": "MyApp API",
+        "name": "CodecServer API — Complete Test Suite",
         "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
     },
     "variable": [
         { "key": "baseUrl", "value": "http://localhost:3000/api/v1" },
-        { "key": "token", "value": "" },
+        { "key": "webUrl", "value": "http://localhost:3000" },
         { "key": "adminToken", "value": "" },
-        { "key": "userId", "value": "" }
+        { "key": "userToken", "value": "" },
+        { "key": "userId", "value": "" },
+        { "key": "testUserId", "value": "" },
+        { "key": "contactId", "value": "" },
+        { "key": "adminId", "value": "" }
     ],
     "item": [
         {
-            "name": "Auth",
+            "name": "SETUP",
             "item": [
                 {
-                    "name": "Register",
-                    "request": {
-                        "method": "POST",
-                        "header": [
-                            {
-                                "key": "Content-Type",
-                                "value": "application/json"
-                            }
-                        ],
-                        "body": {
-                            "mode": "raw",
-                            "raw": "{\"name\":\"Ivan\",\"email\":\"ivan@example.com\",\"password\":\"password123\"}"
-                        },
-                        "url": "{{baseUrl}}/auth/register"
-                    }
-                },
-                {
-                    "name": "Login",
+                    "name": "Register Admin",
                     "event": [
                         {
                             "listen": "test",
                             "script": {
                                 "exec": [
-                                    "const data = pm.response.json();",
-                                    "pm.collectionVariables.set('token', data.data.token);"
+                                    "pm.test('Status 201', () => pm.response.to.have.status(201));",
+                                    "pm.test('Success true', () => pm.expect(pm.response.json().success).to.be.true);",
+                                    "pm.test('Token exists', () => pm.expect(pm.response.json().data.token).to.be.a('string'));",
+                                    "pm.collectionVariables.set('adminToken', pm.response.json().data.token);",
+                                    "pm.collectionVariables.set('adminId', pm.response.json().data.user._id);"
                                 ]
                             }
                         }
@@ -46,47 +36,1932 @@
                     "request": {
                         "method": "POST",
                         "header": [
-                            {
-                                "key": "Content-Type",
-                                "value": "application/json"
-                            }
+                            { "key": "Content-Type", "value": "application/json" }
                         ],
                         "body": {
                             "mode": "raw",
-                            "raw": "{\"email\":\"ivan@example.com\",\"password\":\"password123\"}"
+                            "raw": "{\"name\":\"Admin\",\"email\":\"admin@example.com\",\"password\":\"Admin123\"}"
                         },
-                        "url": "{{baseUrl}}/auth/login"
+                        "url": "{{baseUrl}}/auth/register"
+                    }
+                },
+                {
+                    "name": "Register Regular User",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test('Status 201', () => pm.response.to.have.status(201));",
+                                    "pm.test('Success true', () => pm.expect(pm.response.json().success).to.be.true);",
+                                    "pm.test('Token exists', () => pm.expect(pm.response.json().data.token).to.be.a('string'));",
+                                    "pm.collectionVariables.set('userToken', pm.response.json().data.token);",
+                                    "pm.collectionVariables.set('userId', pm.response.json().data.user._id);"
+                                ]
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            { "key": "Content-Type", "value": "application/json" }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\"name\":\"Regular\",\"email\":\"regular@example.com\",\"password\":\"Password123\"}"
+                        },
+                        "url": "{{baseUrl}}/auth/register"
                     }
                 }
             ]
         },
         {
-            "name": "Users",
+            "name": "AUTH",
             "item": [
                 {
-                    "name": "Get Users (any role)",
+                    "name": "Register Success",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test('Status 201', () => pm.response.to.have.status(201));",
+                                    "pm.test('Success true', () => pm.expect(pm.response.json().success).to.be.true);",
+                                    "pm.test('Token exists', () => pm.expect(pm.response.json().data.token).to.be.a('string'));",
+                                    "pm.test('User has name', () => pm.expect(pm.response.json().data.user.name).to.equal('TestUser'));",
+                                    "pm.test('User has email', () => pm.expect(pm.response.json().data.user.email).to.equal('test@example.com'));",
+                                    "pm.test('Password not returned', () => pm.expect(pm.response.json().data.user.password).to.be.undefined);"
+                                ]
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            { "key": "Content-Type", "value": "application/json" }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\"name\":\"TestUser\",\"email\":\"test@example.com\",\"password\":\"Password123\"}"
+                        },
+                        "url": "{{baseUrl}}/auth/register"
+                    }
+                },
+                {
+                    "name": "Register Duplicate Email",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test('Status 400', () => pm.response.to.have.status(400));",
+                                    "pm.test('Success false', () => pm.expect(pm.response.json().success).to.be.false);",
+                                    "pm.test('Duplicate error', () => pm.expect(pm.response.json().message).to.include('уже существует'));"
+                                ]
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            { "key": "Content-Type", "value": "application/json" }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\"name\":\"Duplicate\",\"email\":\"test@example.com\",\"password\":\"Password123\"}"
+                        },
+                        "url": "{{baseUrl}}/auth/register"
+                    }
+                },
+                {
+                    "name": "Register Short Password",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test('Status 400', () => pm.response.to.have.status(400));",
+                                    "pm.test('Success false', () => pm.expect(pm.response.json().success).to.be.false);",
+                                    "pm.test('Short password error', () => pm.expect(pm.response.json().message).to.include('минимум 8'));"
+                                ]
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            { "key": "Content-Type", "value": "application/json" }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\"name\":\"Short\",\"email\":\"short@example.com\",\"password\":\"Pass12\"}"
+                        },
+                        "url": "{{baseUrl}}/auth/register"
+                    }
+                },
+                {
+                    "name": "Register No Uppercase",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test('Status 400', () => pm.response.to.have.status(400));",
+                                    "pm.test('Success false', () => pm.expect(pm.response.json().success).to.be.false);",
+                                    "pm.test('Uppercase required', () => pm.expect(pm.response.json().message).to.include('прописные'));"
+                                ]
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            { "key": "Content-Type", "value": "application/json" }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\"name\":\"Weak\",\"email\":\"weak@example.com\",\"password\":\"password123\"}"
+                        },
+                        "url": "{{baseUrl}}/auth/register"
+                    }
+                },
+                {
+                    "name": "Register No Digits",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test('Status 400', () => pm.response.to.have.status(400));",
+                                    "pm.test('Success false', () => pm.expect(pm.response.json().success).to.be.false);",
+                                    "pm.test('Digits required', () => pm.expect(pm.response.json().message).to.include('цифры'));"
+                                ]
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            { "key": "Content-Type", "value": "application/json" }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\"name\":\"NoDigit\",\"email\":\"nodigit@example.com\",\"password\":\"Password\"}"
+                        },
+                        "url": "{{baseUrl}}/auth/register"
+                    }
+                },
+                {
+                    "name": "Register Invalid Email",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test('Status 400', () => pm.response.to.have.status(400));",
+                                    "pm.test('Success false', () => pm.expect(pm.response.json().success).to.be.false);",
+                                    "pm.test('Invalid email', () => pm.expect(pm.response.json().message).to.include('email'));"
+                                ]
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            { "key": "Content-Type", "value": "application/json" }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\"name\":\"Invalid\",\"email\":\"invalid-email\",\"password\":\"Password123\"}"
+                        },
+                        "url": "{{baseUrl}}/auth/register"
+                    }
+                },
+                {
+                    "name": "Register Name Too Short",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test('Status 400', () => pm.response.to.have.status(400));",
+                                    "pm.test('Success false', () => pm.expect(pm.response.json().success).to.be.false);",
+                                    "pm.test('Name too short', () => pm.expect(pm.response.json().message).to.include('минимум 2'));"
+                                ]
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            { "key": "Content-Type", "value": "application/json" }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\"name\":\"A\",\"email\":\"shortname@example.com\",\"password\":\"Password123\"}"
+                        },
+                        "url": "{{baseUrl}}/auth/register"
+                    }
+                },
+                {
+                    "name": "Register Name Too Long",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test('Status 400', () => pm.response.to.have.status(400));",
+                                    "pm.test('Success false', () => pm.expect(pm.response.json().success).to.be.false);",
+                                    "pm.test('Name too long', () => pm.expect(pm.response.json().message).to.include('превышать 25'));"
+                                ]
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            { "key": "Content-Type", "value": "application/json" }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\"name\":\"ABCDEFGHIJKLMNOPQRSTUVWXYZ\",\"email\":\"longname@example.com\",\"password\":\"Password123\"}"
+                        },
+                        "url": "{{baseUrl}}/auth/register"
+                    }
+                },
+                {
+                    "name": "Register Missing Name",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test('Status 400', () => pm.response.to.have.status(400));",
+                                    "pm.test('Success false', () => pm.expect(pm.response.json().success).to.be.false);",
+                                    "pm.test('Name required', () => pm.expect(pm.response.json().message).to.include('Имя'));"
+                                ]
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            { "key": "Content-Type", "value": "application/json" }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\"email\":\"noname@example.com\",\"password\":\"Password123\"}"
+                        },
+                        "url": "{{baseUrl}}/auth/register"
+                    }
+                },
+                {
+                    "name": "Register Missing Email",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test('Status 400', () => pm.response.to.have.status(400));",
+                                    "pm.test('Success false', () => pm.expect(pm.response.json().success).to.be.false);",
+                                    "pm.test('Email required', () => pm.expect(pm.response.json().message).to.include('Email'));"
+                                ]
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            { "key": "Content-Type", "value": "application/json" }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\"name\":\"NoEmail\",\"password\":\"Password123\"}"
+                        },
+                        "url": "{{baseUrl}}/auth/register"
+                    }
+                },
+                {
+                    "name": "Register Missing Password",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test('Status 400', () => pm.response.to.have.status(400));",
+                                    "pm.test('Success false', () => pm.expect(pm.response.json().success).to.be.false);",
+                                    "pm.test('Password required', () => pm.expect(pm.response.json().message).to.include('Пароль'));"
+                                ]
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            { "key": "Content-Type", "value": "application/json" }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\"name\":\"NoPwd\",\"email\":\"nopwd@example.com\"}"
+                        },
+                        "url": "{{baseUrl}}/auth/register"
+                    }
+                },
+                {
+                    "name": "Login Success",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                                    "pm.test('Success true', () => pm.expect(pm.response.json().success).to.be.true);",
+                                    "pm.test('Token exists', () => pm.expect(pm.response.json().data.token).to.be.a('string'));",
+                                    "pm.test('User has email', () => pm.expect(pm.response.json().data.user.email).to.equal('test@example.com'));"
+                                ]
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            { "key": "Content-Type", "value": "application/json" }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\"email\":\"test@example.com\",\"password\":\"Password123\"}"
+                        },
+                        "url": "{{baseUrl}}/auth/login"
+                    }
+                },
+                {
+                    "name": "Login Wrong Password",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test('Status 401', () => pm.response.to.have.status(401));",
+                                    "pm.test('Success false', () => pm.expect(pm.response.json().success).to.be.false);",
+                                    "pm.test('Wrong password', () => pm.expect(pm.response.json().message).to.include('Неверный'));"
+                                ]
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            { "key": "Content-Type", "value": "application/json" }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\"email\":\"test@example.com\",\"password\":\"WrongPassword\"}"
+                        },
+                        "url": "{{baseUrl}}/auth/login"
+                    }
+                },
+                {
+                    "name": "Login Non-existent Email",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test('Status 401', () => pm.response.to.have.status(401));",
+                                    "pm.test('Success false', () => pm.expect(pm.response.json().success).to.be.false);",
+                                    "pm.test('Invalid credentials', () => pm.expect(pm.response.json().message).to.include('Неверный'));"
+                                ]
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            { "key": "Content-Type", "value": "application/json" }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\"email\":\"nonexistent@example.com\",\"password\":\"Password123\"}"
+                        },
+                        "url": "{{baseUrl}}/auth/login"
+                    }
+                },
+                {
+                    "name": "Session Info",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                                    "pm.test('Authenticated true', () => pm.expect(pm.response.json().authenticated).to.be.true);",
+                                    "pm.test('User has email', () => pm.expect(pm.response.json().user.email).to.equal('test@example.com'));"
+                                ]
+                            }
+                        }
+                    ],
                     "request": {
                         "method": "GET",
                         "header": [
-                            {
-                                "key": "Authorization",
-                                "value": "Bearer {{token}}"
+                            { "key": "Authorization", "value": "Bearer {{userToken}}" }
+                        ],
+                        "url": "{{baseUrl}}/auth/session"
+                    }
+                }
+            ]
+        },
+        {
+            "name": "USERS",
+            "item": [
+                {
+                    "name": "Get Users With Token",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                                    "pm.test('Success true', () => pm.expect(pm.response.json().success).to.be.true);",
+                                    "pm.test('Data is array', () => pm.expect(pm.response.json().data).to.be.an('array'));",
+                                    "pm.test('Has pagination', () => pm.expect(pm.response.json()).to.have.property('page'));",
+                                    "pm.test('Has total', () => pm.expect(pm.response.json()).to.have.property('total'));"
+                                ]
                             }
+                        }
+                    ],
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            { "key": "Authorization", "value": "Bearer {{userToken}}" }
                         ],
                         "url": "{{baseUrl}}/users"
                     }
                 },
                 {
-                    "name": "Delete User (admin only, 403 for user)",
+                    "name": "Get Users Pagination",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                                    "pm.test('Success true', () => pm.expect(pm.response.json().success).to.be.true);",
+                                    "pm.test('Page parameter works', () => pm.expect(pm.response.json().page).to.equal(1));",
+                                    "pm.test('Limit parameter works', () => pm.expect(pm.response.json().data.length).to.be.at.most(5));"
+                                ]
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            { "key": "Authorization", "value": "Bearer {{userToken}}" }
+                        ],
+                        "url": "{{baseUrl}}/users?page=1&limit=5"
+                    }
+                },
+                {
+                    "name": "Get Users No Token",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test('Status 401', () => pm.response.to.have.status(401));",
+                                    "pm.test('Success false', () => pm.expect(pm.response.json().success).to.be.false);",
+                                    "pm.test('Auth required', () => pm.expect(pm.response.json().message).to.include('авторизации'));"
+                                ]
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "GET",
+                        "url": "{{baseUrl}}/users"
+                    }
+                },
+                {
+                    "name": "Get Users Invalid Token",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test('Status 401', () => pm.response.to.have.status(401));",
+                                    "pm.test('Success false', () => pm.expect(pm.response.json().success).to.be.false);"
+                                ]
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            { "key": "Authorization", "value": "Bearer invalid_token" }
+                        ],
+                        "url": "{{baseUrl}}/users"
+                    }
+                },
+                {
+                    "name": "Get User By ID",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                                    "pm.test('Success true', () => pm.expect(pm.response.json().success).to.be.true);",
+                                    "pm.test('User has _id', () => pm.expect(pm.response.json().data).to.have.property('_id'));",
+                                    "pm.test('User has name', () => pm.expect(pm.response.json().data).to.have.property('name'));",
+                                    "pm.test('Password not returned', () => pm.expect(pm.response.json().data.password).to.be.undefined);"
+                                ]
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            { "key": "Authorization", "value": "Bearer {{userToken}}" }
+                        ],
+                        "url": "{{baseUrl}}/users/{{userId}}"
+                    }
+                },
+                {
+                    "name": "Get User Invalid ID",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test('Status 404', () => pm.response.to.have.status(404));",
+                                    "pm.test('Success false', () => pm.expect(pm.response.json().success).to.be.false);",
+                                    "pm.test('Not found message', () => pm.expect(pm.response.json().message).to.include('не найден'));"
+                                ]
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            { "key": "Authorization", "value": "Bearer {{userToken}}" }
+                        ],
+                        "url": "{{baseUrl}}/users/507f1f77bcf86cd799439011"
+                    }
+                },
+                {
+                    "name": "Get User No Token",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test('Status 401', () => pm.response.to.have.status(401));",
+                                    "pm.test('Success false', () => pm.expect(pm.response.json().success).to.be.false);"
+                                ]
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "GET",
+                        "url": "{{baseUrl}}/users/{{userId}}"
+                    }
+                },
+                {
+                    "name": "Create User Admin Only",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test('Status 201', () => pm.response.to.have.status(201));",
+                                    "pm.test('Success true', () => pm.expect(pm.response.json().success).to.be.true);",
+                                    "pm.test('User has _id', () => pm.expect(pm.response.json().data).to.have.property('_id'));",
+                                    "pm.test('User has correct name', () => pm.expect(pm.response.json().data.name).to.equal('NewUser'));",
+                                    "pm.collectionVariables.set('testUserId', pm.response.json().data._id);"
+                                ]
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            { "key": "Authorization", "value": "Bearer {{adminToken}}" },
+                            { "key": "Content-Type", "value": "application/json" }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\"name\":\"NewUser\",\"email\":\"newuser@example.com\",\"password\":\"Password123\"}"
+                        },
+                        "url": "{{baseUrl}}/users"
+                    }
+                },
+                {
+                    "name": "Create User No Token",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test('Status 401', () => pm.response.to.have.status(401));",
+                                    "pm.test('Success false', () => pm.expect(pm.response.json().success).to.be.false);"
+                                ]
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            { "key": "Content-Type", "value": "application/json" }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\"name\":\"Hacker\",\"email\":\"hacker@example.com\",\"password\":\"Password123\"}"
+                        },
+                        "url": "{{baseUrl}}/users"
+                    }
+                },
+                {
+                    "name": "Create User User Role Forbidden",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test('Status 403', () => pm.response.to.have.status(403));",
+                                    "pm.test('Success false', () => pm.expect(pm.response.json().success).to.be.false);",
+                                    "pm.test('Forbidden message', () => pm.expect(pm.response.json().message).to.include('Недостаточно прав'));"
+                                ]
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            { "key": "Authorization", "value": "Bearer {{userToken}}" },
+                            { "key": "Content-Type", "value": "application/json" }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\"name\":\"Forbidden\",\"email\":\"forbidden@example.com\",\"password\":\"Password123\"}"
+                        },
+                        "url": "{{baseUrl}}/users"
+                    }
+                },
+                {
+                    "name": "Create User Duplicate Email",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test('Status 400', () => pm.response.to.have.status(400));",
+                                    "pm.test('Success false', () => pm.expect(pm.response.json().success).to.be.false);",
+                                    "pm.test('Duplicate error', () => pm.expect(pm.response.json().message).to.include('существует'));"
+                                ]
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            { "key": "Authorization", "value": "Bearer {{adminToken}}" },
+                            { "key": "Content-Type", "value": "application/json" }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\"name\":\"Duplicate\",\"email\":\"newuser@example.com\",\"password\":\"Password123\"}"
+                        },
+                        "url": "{{baseUrl}}/users"
+                    }
+                },
+                {
+                    "name": "Create User Missing Name",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test('Status 400', () => pm.response.to.have.status(400));",
+                                    "pm.test('Success false', () => pm.expect(pm.response.json().success).to.be.false);",
+                                    "pm.test('Name required', () => pm.expect(pm.response.json().message).to.include('Имя'));"
+                                ]
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            { "key": "Authorization", "value": "Bearer {{adminToken}}" },
+                            { "key": "Content-Type", "value": "application/json" }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\"email\":\"noname@example.com\",\"password\":\"Password123\"}"
+                        },
+                        "url": "{{baseUrl}}/users"
+                    }
+                },
+                {
+                    "name": "Create User Invalid Email",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test('Status 400', () => pm.response.to.have.status(400));",
+                                    "pm.test('Success false', () => pm.expect(pm.response.json().success).to.be.false);",
+                                    "pm.test('Invalid email', () => pm.expect(pm.response.json().message).to.include('email'));"
+                                ]
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            { "key": "Authorization", "value": "Bearer {{adminToken}}" },
+                            { "key": "Content-Type", "value": "application/json" }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\"name\":\"Invalid\",\"email\":\"invalid-email\",\"password\":\"Password123\"}"
+                        },
+                        "url": "{{baseUrl}}/users"
+                    }
+                },
+                {
+                    "name": "Update User Admin Only",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                                    "pm.test('Success true', () => pm.expect(pm.response.json().success).to.be.true);",
+                                    "pm.test('Name updated', () => pm.expect(pm.response.json().data.name).to.equal('UpdatedName'));"
+                                ]
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "PUT",
+                        "header": [
+                            { "key": "Authorization", "value": "Bearer {{adminToken}}" },
+                            { "key": "Content-Type", "value": "application/json" }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\"name\":\"UpdatedName\"}"
+                        },
+                        "url": "{{baseUrl}}/users/{{testUserId}}"
+                    }
+                },
+                {
+                    "name": "Update User User Role Forbidden",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test('Status 403', () => pm.response.to.have.status(403));",
+                                    "pm.test('Success false', () => pm.expect(pm.response.json().success).to.be.false);"
+                                ]
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "PUT",
+                        "header": [
+                            { "key": "Authorization", "value": "Bearer {{userToken}}" },
+                            { "key": "Content-Type", "value": "application/json" }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\"name\":\"Hacker\"}"
+                        },
+                        "url": "{{baseUrl}}/users/{{testUserId}}"
+                    }
+                },
+                {
+                    "name": "Update User No Token",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test('Status 401', () => pm.response.to.have.status(401));",
+                                    "pm.test('Success false', () => pm.expect(pm.response.json().success).to.be.false);"
+                                ]
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "PUT",
+                        "header": [
+                            { "key": "Content-Type", "value": "application/json" }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\"name\":\"Hacker\"}"
+                        },
+                        "url": "{{baseUrl}}/users/{{testUserId}}"
+                    }
+                },
+                {
+                    "name": "Update User Invalid ID",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test('Status 404', () => pm.response.to.have.status(404));",
+                                    "pm.test('Success false', () => pm.expect(pm.response.json().success).to.be.false);"
+                                ]
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "PUT",
+                        "header": [
+                            { "key": "Authorization", "value": "Bearer {{adminToken}}" },
+                            { "key": "Content-Type", "value": "application/json" }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\"name\":\"Test\"}"
+                        },
+                        "url": "{{baseUrl}}/users/507f1f77bcf86cd799439011"
+                    }
+                },
+                {
+                    "name": "Update User Empty Data",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test('Status 400', () => pm.response.to.have.status(400));",
+                                    "pm.test('Success false', () => pm.expect(pm.response.json().success).to.be.false);"
+                                ]
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "PUT",
+                        "header": [
+                            { "key": "Authorization", "value": "Bearer {{adminToken}}" },
+                            { "key": "Content-Type", "value": "application/json" }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{}"
+                        },
+                        "url": "{{baseUrl}}/users/{{testUserId}}"
+                    }
+                },
+                {
+                    "name": "Update User Email Duplicate",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test('Status 400', () => pm.response.to.have.status(400));",
+                                    "pm.test('Success false', () => pm.expect(pm.response.json().success).to.be.false);",
+                                    "pm.test('Duplicate email', () => pm.expect(pm.response.json().message).to.include('существует'));"
+                                ]
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "PUT",
+                        "header": [
+                            { "key": "Authorization", "value": "Bearer {{adminToken}}" },
+                            { "key": "Content-Type", "value": "application/json" }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\"email\":\"test@example.com\"}"
+                        },
+                        "url": "{{baseUrl}}/users/{{testUserId}}"
+                    }
+                },
+                {
+                    "name": "Delete User Admin Only",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                                    "pm.test('Success true', () => pm.expect(pm.response.json().success).to.be.true);",
+                                    "pm.test('Deleted message', () => pm.expect(pm.response.json().message).to.include('удалён'));"
+                                ]
+                            }
+                        }
+                    ],
                     "request": {
                         "method": "DELETE",
                         "header": [
-                            {
-                                "key": "Authorization",
-                                "value": "Bearer {{token}}"
+                            { "key": "Authorization", "value": "Bearer {{adminToken}}" }
+                        ],
+                        "url": "{{baseUrl}}/users/{{testUserId}}"
+                    }
+                },
+                {
+                    "name": "Delete User User Role Forbidden",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test('Status 403', () => pm.response.to.have.status(403));",
+                                    "pm.test('Success false', () => pm.expect(pm.response.json().success).to.be.false);"
+                                ]
                             }
+                        }
+                    ],
+                    "request": {
+                        "method": "DELETE",
+                        "header": [
+                            { "key": "Authorization", "value": "Bearer {{userToken}}" }
                         ],
                         "url": "{{baseUrl}}/users/{{userId}}"
+                    }
+                },
+                {
+                    "name": "Delete User No Token",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test('Status 401', () => pm.response.to.have.status(401));",
+                                    "pm.test('Success false', () => pm.expect(pm.response.json().success).to.be.false);"
+                                ]
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "DELETE",
+                        "url": "{{baseUrl}}/users/{{userId}}"
+                    }
+                },
+                {
+                    "name": "Delete User Invalid ID",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test('Status 404', () => pm.response.to.have.status(404));",
+                                    "pm.test('Success false', () => pm.expect(pm.response.json().success).to.be.false);"
+                                ]
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "DELETE",
+                        "header": [
+                            { "key": "Authorization", "value": "Bearer {{adminToken}}" }
+                        ],
+                        "url": "{{baseUrl}}/users/507f1f77bcf86cd799439011"
+                    }
+                }
+            ]
+        },
+        {
+            "name": "CONTACT",
+            "item": [
+                {
+                    "name": "Submit Contact Success",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test('Status 201', () => pm.response.to.have.status(201));",
+                                    "pm.test('Success true', () => pm.expect(pm.response.json().success).to.be.true);",
+                                    "pm.test('Has contact ID', () => pm.expect(pm.response.json().data).to.have.property('id'));",
+                                    "pm.collectionVariables.set('contactId', pm.response.json().data.id);"
+                                ]
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            { "key": "Content-Type", "value": "application/json" }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\"name\":\"John Doe\",\"email\":\"john@example.com\",\"message\":\"This is a test message that is long enough to pass validation.\"}"
+                        },
+                        "url": "{{baseUrl}}/contact"
+                    }
+                },
+                {
+                    "name": "Submit Contact Cyrillic",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test('Status 201', () => pm.response.to.have.status(201));",
+                                    "pm.test('Success true', () => pm.expect(pm.response.json().success).to.be.true);"
+                                ]
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            { "key": "Content-Type", "value": "application/json" }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\"name\":\"Иван Петров\",\"email\":\"ivan@example.com\",\"message\":\"Это тестовое сообщение на русском языке. Оно достаточно длинное.\"}"
+                        },
+                        "url": "{{baseUrl}}/contact"
+                    }
+                },
+                {
+                    "name": "Submit Contact Emoji",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test('Status 201', () => pm.response.to.have.status(201));",
+                                    "pm.test('Success true', () => pm.expect(pm.response.json().success).to.be.true);"
+                                ]
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            { "key": "Content-Type", "value": "application/json" }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\"name\":\"Emoji Test\",\"email\":\"emoji@example.com\",\"message\":\"Hello This is a test message with emojis\"}"
+                        },
+                        "url": "{{baseUrl}}/contact"
+                    }
+                },
+                {
+                    "name": "Submit Contact URL",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test('Status 201', () => pm.response.to.have.status(201));",
+                                    "pm.test('Success true', () => pm.expect(pm.response.json().success).to.be.true);"
+                                ]
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            { "key": "Content-Type", "value": "application/json" }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\"name\":\"URL Test\",\"email\":\"url@example.com\",\"message\":\"Check this link: https://example.com It is a valid test message.\"}"
+                        },
+                        "url": "{{baseUrl}}/contact"
+                    }
+                },
+                {
+                    "name": "Submit Contact Short Message",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test('Status 400', () => pm.response.to.have.status(400));",
+                                    "pm.test('Success false', () => pm.expect(pm.response.json().success).to.be.false);",
+                                    "pm.test('Message too short', () => pm.expect(pm.response.json().message).to.include('минимум 10'));"
+                                ]
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            { "key": "Content-Type", "value": "application/json" }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\"name\":\"John\",\"email\":\"john@example.com\",\"message\":\"Hi\"}"
+                        },
+                        "url": "{{baseUrl}}/contact"
+                    }
+                },
+                {
+                    "name": "Submit Contact No Name",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test('Status 400', () => pm.response.to.have.status(400));",
+                                    "pm.test('Success false', () => pm.expect(pm.response.json().success).to.be.false);",
+                                    "pm.test('Name required', () => pm.expect(pm.response.json().message).to.include('Имя'));"
+                                ]
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            { "key": "Content-Type", "value": "application/json" }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\"email\":\"john@example.com\",\"message\":\"This is a test message that is long enough.\"}"
+                        },
+                        "url": "{{baseUrl}}/contact"
+                    }
+                },
+                {
+                    "name": "Submit Contact Invalid Email",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test('Status 400', () => pm.response.to.have.status(400));",
+                                    "pm.test('Success false', () => pm.expect(pm.response.json().success).to.be.false);",
+                                    "pm.test('Invalid email', () => pm.expect(pm.response.json().message).to.include('email'));"
+                                ]
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            { "key": "Content-Type", "value": "application/json" }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\"name\":\"John\",\"email\":\"invalid-email\",\"message\":\"This is a test message that is long enough.\"}"
+                        },
+                        "url": "{{baseUrl}}/contact"
+                    }
+                },
+                {
+                    "name": "Get Contact Stats Admin Only",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                                    "pm.test('Success true', () => pm.expect(pm.response.json().success).to.be.true);",
+                                    "pm.test('Has stats', () => pm.expect(pm.response.json().data).to.have.property('total'));",
+                                    "pm.test('Has new', () => pm.expect(pm.response.json().data).to.have.property('new'));",
+                                    "pm.test('Has read', () => pm.expect(pm.response.json().data).to.have.property('read'));",
+                                    "pm.test('Has replied', () => pm.expect(pm.response.json().data).to.have.property('replied'));"
+                                ]
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            { "key": "Authorization", "value": "Bearer {{adminToken}}" }
+                        ],
+                        "url": "{{baseUrl}}/contact/admin/stats"
+                    }
+                },
+                {
+                    "name": "Get Contact Stats User Forbidden",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test('Status 403', () => pm.response.to.have.status(403));",
+                                    "pm.test('Success false', () => pm.expect(pm.response.json().success).to.be.false);"
+                                ]
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            { "key": "Authorization", "value": "Bearer {{userToken}}" }
+                        ],
+                        "url": "{{baseUrl}}/contact/admin/stats"
+                    }
+                },
+                {
+                    "name": "Get All Messages Admin Only",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                                    "pm.test('Success true', () => pm.expect(pm.response.json().success).to.be.true);",
+                                    "pm.test('Data is array', () => pm.expect(pm.response.json().data).to.be.an('array'));",
+                                    "pm.test('Has pagination', () => pm.expect(pm.response.json()).to.have.property('pagination'));"
+                                ]
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            { "key": "Authorization", "value": "Bearer {{adminToken}}" }
+                        ],
+                        "url": "{{baseUrl}}/contact/admin/messages"
+                    }
+                },
+                {
+                    "name": "Get Message By ID Admin Only",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                                    "pm.test('Success true', () => pm.expect(pm.response.json().success).to.be.true);",
+                                    "pm.test('Message has id', () => pm.expect(pm.response.json().data).to.have.property('_id'));"
+                                ]
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            { "key": "Authorization", "value": "Bearer {{adminToken}}" }
+                        ],
+                        "url": "{{baseUrl}}/contact/admin/messages/{{contactId}}"
+                    }
+                },
+                {
+                    "name": "Mark as Read Admin Only",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                                    "pm.test('Success true', () => pm.expect(pm.response.json().success).to.be.true);",
+                                    "pm.test('Marked as read', () => pm.expect(pm.response.json().message).to.include('прочитанное'));"
+                                ]
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "PATCH",
+                        "header": [
+                            { "key": "Authorization", "value": "Bearer {{adminToken}}" }
+                        ],
+                        "url": "{{baseUrl}}/contact/admin/messages/{{contactId}}/read"
+                    }
+                },
+                {
+                    "name": "Mark as Replied Admin Only",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                                    "pm.test('Success true', () => pm.expect(pm.response.json().success).to.be.true);",
+                                    "pm.test('Marked as replied', () => pm.expect(pm.response.json().message).to.include('ответено'));"
+                                ]
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "PATCH",
+                        "header": [
+                            { "key": "Authorization", "value": "Bearer {{adminToken}}" }
+                        ],
+                        "url": "{{baseUrl}}/contact/admin/messages/{{contactId}}/replied"
+                    }
+                },
+                {
+                    "name": "Get Messages No Token",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test('Status 401', () => pm.response.to.have.status(401));",
+                                    "pm.test('Success false', () => pm.expect(pm.response.json().success).to.be.false);"
+                                ]
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "GET",
+                        "url": "{{baseUrl}}/contact/admin/messages"
+                    }
+                },
+                {
+                    "name": "Get Message Invalid ID",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test('Status 404', () => pm.response.to.have.status(404));",
+                                    "pm.test('Success false', () => pm.expect(pm.response.json().success).to.be.false);"
+                                ]
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            { "key": "Authorization", "value": "Bearer {{adminToken}}" }
+                        ],
+                        "url": "{{baseUrl}}/contact/admin/messages/507f1f77bcf86cd799439011"
+                    }
+                },
+                {
+                    "name": "Delete Message Admin Only",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                                    "pm.test('Success true', () => pm.expect(pm.response.json().success).to.be.true);",
+                                    "pm.test('Deleted message', () => pm.expect(pm.response.json().message).to.include('удалено'));"
+                                ]
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "DELETE",
+                        "header": [
+                            { "key": "Authorization", "value": "Bearer {{adminToken}}" }
+                        ],
+                        "url": "{{baseUrl}}/contact/admin/messages/{{contactId}}"
+                    }
+                }
+            ]
+        },
+        {
+            "name": "ADMIN",
+            "item": [
+                {
+                    "name": "Make Admin Success",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                                    "pm.test('Success true', () => pm.expect(pm.response.json().success).to.be.true);",
+                                    "pm.test('Role is admin', () => pm.expect(pm.response.json().data.role).to.equal('admin'));"
+                                ]
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            { "key": "Authorization", "value": "Bearer {{adminToken}}" }
+                        ],
+                        "url": "{{baseUrl}}/admin/make-admin/{{userId}}"
+                    }
+                },
+                {
+                    "name": "Make Admin No Token",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test('Status 401', () => pm.response.to.have.status(401));",
+                                    "pm.test('Success false', () => pm.expect(pm.response.json().success).to.be.false);"
+                                ]
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "url": "{{baseUrl}}/admin/make-admin/{{userId}}"
+                    }
+                },
+                {
+                    "name": "Make Admin Invalid ID",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test('Status 404', () => pm.response.to.have.status(404));",
+                                    "pm.test('Success false', () => pm.expect(pm.response.json().success).to.be.false);"
+                                ]
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            { "key": "Authorization", "value": "Bearer {{adminToken}}" }
+                        ],
+                        "url": "{{baseUrl}}/admin/make-admin/507f1f77bcf86cd799439011"
+                    }
+                }
+            ]
+        },
+        {
+            "name": "SECURITY",
+            "item": [
+                {
+                    "name": "Rate Limit Too Many Requests",
+                    "event": [
+                        {
+                            "listen": "prerequest",
+                            "script": {
+                                "exec": [
+                                    "const requests = [];",
+                                    "for (let i = 0; i < 1000; i++) {",
+                                    "    requests.push(new Promise((resolve) => {",
+                                    "        pm.sendRequest({",
+                                    "            url: pm.collectionVariables.get('baseUrl') + '/auth/login',",
+                                    "            method: 'POST',",
+                                    "            header: {'Content-Type': 'application/json'},",
+                                    "            body: {",
+                                    "                mode: 'raw',",
+                                    "                raw: JSON.stringify({",
+                                    "                    email: 'ratelimit' + i + '@example.com',",
+                                    "                    password: 'WrongPassword'",
+                                    "                })",
+                                    "            }",
+                                    "        }, (err, res) => resolve(res));",
+                                    "    }));",
+                                    "}",
+                                    "Promise.all(requests).then(responses => {",
+                                    "    const rateLimited = responses.some(r => r && r.status === 429);",
+                                    "    pm.environment.set('rateLimited', rateLimited);",
+                                    "});"
+                                ]
+                            }
+                        },
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test('Rate limit triggered', () => pm.expect(pm.environment.get('rateLimited')).to.be.true);"
+                                ]
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            { "key": "Content-Type", "value": "application/json" }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\"email\":\"ratelimit@example.com\",\"password\":\"WrongPassword\"}"
+                        },
+                        "url": "{{baseUrl}}/auth/login"
+                    }
+                },
+                {
+                    "name": "Account Lockout",
+                    "event": [
+                        {
+                            "listen": "prerequest",
+                            "script": {
+                                "exec": [
+                                    "pm.sendRequest({",
+                                    "    url: pm.collectionVariables.get('baseUrl') + '/auth/register',",
+                                    "    method: 'POST',",
+                                    "    header: {'Content-Type': 'application/json'},",
+                                    "    body: {",
+                                    "        mode: 'raw',",
+                                    "        raw: JSON.stringify({",
+                                    "            name: 'LockTest',",
+                                    "            email: 'lockout@example.com',",
+                                    "            password: 'Password123'",
+                                    "        })",
+                                    "    }",
+                                    "}, function (err, res) {",
+                                    "    pm.environment.set('lockUserCreated', true);",
+                                    "});",
+                                    "",
+                                    "for (let i = 0; i < 5; i++) {",
+                                    "    pm.sendRequest({",
+                                    "        url: pm.collectionVariables.get('baseUrl') + '/auth/login',",
+                                    "        method: 'POST',",
+                                    "        header: {'Content-Type': 'application/json'},",
+                                    "        body: {",
+                                    "            mode: 'raw',",
+                                    "            raw: JSON.stringify({",
+                                    "                email: 'lockout@example.com',",
+                                    "                password: 'WrongPassword'",
+                                    "            })",
+                                    "        }",
+                                    "    }, function (err, res) {",
+                                    "        pm.environment.set('attempt' + i, res.status);",
+                                    "    });",
+                                    "}"
+                                ]
+                            }
+                        },
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test('Status 429', () => pm.response.to.have.status(429));",
+                                    "pm.test('Success false', () => pm.expect(pm.response.json().success).to.be.false);",
+                                    "pm.test('Lockout message', () => pm.expect(pm.response.json().message).to.include('заблокирован'));"
+                                ]
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            { "key": "Content-Type", "value": "application/json" }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\"email\":\"lockout@example.com\",\"password\":\"WrongPassword\"}"
+                        },
+                        "url": "{{baseUrl}}/auth/login"
+                    }
+                },
+                {
+                    "name": "XSS Contact Form",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test('Status 201', () => pm.response.to.have.status(201));",
+                                    "pm.test('Success true', () => pm.expect(pm.response.json().success).to.be.true);"
+                                ]
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            { "key": "Content-Type", "value": "application/json" }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\"name\":\"<script>alert('XSS')</script>\",\"email\":\"xss@example.com\",\"message\":\"This is a test message that is long enough.\"}"
+                        },
+                        "url": "{{baseUrl}}/contact"
+                    }
+                }
+            ]
+        },
+        {
+            "name": "PATHS",
+            "item": [
+                {
+                    "name": "GET Home Page",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                                    "pm.test('Content-Type is HTML', () => pm.expect(pm.response.headers.get('content-type')).to.include('text/html'));"
+                                ]
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "GET",
+                        "url": "{{webUrl}}/"
+                    }
+                },
+                {
+                    "name": "GET About Page",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                                    "pm.test('Content-Type is HTML', () => pm.expect(pm.response.headers.get('content-type')).to.include('text/html'));"
+                                ]
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "GET",
+                        "url": "{{webUrl}}/about"
+                    }
+                },
+                {
+                    "name": "GET Login Page",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                                    "pm.test('Content-Type is HTML', () => pm.expect(pm.response.headers.get('content-type')).to.include('text/html'));"
+                                ]
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "GET",
+                        "url": "{{webUrl}}/login"
+                    }
+                },
+                {
+                    "name": "GET Register Page",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                                    "pm.test('Content-Type is HTML', () => pm.expect(pm.response.headers.get('content-type')).to.include('text/html'));"
+                                ]
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "GET",
+                        "url": "{{webUrl}}/register"
+                    }
+                },
+                {
+                    "name": "GET Users Redirect",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test('Status 302', () => pm.response.to.have.status(302));",
+                                    "pm.test('Redirect to login', () => pm.expect(pm.response.headers.get('location')).to.include('/login'));"
+                                ]
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "GET",
+                        "url": "{{webUrl}}/users"
+                    }
+                },
+                {
+                    "name": "GET Non-existent Page",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test('Status 404', () => pm.response.to.have.status(404));",
+                                    "pm.test('Success false', () => pm.expect(pm.response.json().success).to.be.false);",
+                                    "pm.test('Not found message', () => pm.expect(pm.response.json().message).to.include('не найден'));"
+                                ]
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "GET",
+                        "url": "{{webUrl}}/non-existent"
+                    }
+                }
+            ]
+        },
+        {
+            "name": "EDGE",
+            "item": [
+                {
+                    "name": "Register Name 2 Chars",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test('Status 201', () => pm.response.to.have.status(201));",
+                                    "pm.test('Success true', () => pm.expect(pm.response.json().success).to.be.true);",
+                                    "pm.test('Name is 2 chars', () => pm.expect(pm.response.json().data.user.name).to.equal('Ab'));"
+                                ]
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            { "key": "Content-Type", "value": "application/json" }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\"name\":\"Ab\",\"email\":\"minname@example.com\",\"password\":\"Password123\"}"
+                        },
+                        "url": "{{baseUrl}}/auth/register"
+                    }
+                },
+                {
+                    "name": "Register Name 25 Chars",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test('Status 201', () => pm.response.to.have.status(201));",
+                                    "pm.test('Success true', () => pm.expect(pm.response.json().success).to.be.true);"
+                                ]
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            { "key": "Content-Type", "value": "application/json" }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\"name\":\"ABCDEFGHIJKLMNOPQRSTUVWXY\",\"email\":\"maxname@example.com\",\"password\":\"Password123\"}"
+                        },
+                        "url": "{{baseUrl}}/auth/register"
+                    }
+                },
+                {
+                    "name": "Register Name 26 Chars",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test('Status 400', () => pm.response.to.have.status(400));",
+                                    "pm.test('Success false', () => pm.expect(pm.response.json().success).to.be.false);"
+                                ]
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            { "key": "Content-Type", "value": "application/json" }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\"name\":\"ABCDEFGHIJKLMNOPQRSTUVWXYZ\",\"email\":\"toolong@example.com\",\"password\":\"Password123\"}"
+                        },
+                        "url": "{{baseUrl}}/auth/register"
+                    }
+                },
+                {
+                    "name": "Register Password 8 Chars",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test('Status 201', () => pm.response.to.have.status(201));",
+                                    "pm.test('Success true', () => pm.expect(pm.response.json().success).to.be.true);"
+                                ]
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            { "key": "Content-Type", "value": "application/json" }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\"name\":\"MinPwd\",\"email\":\"minpwd@example.com\",\"password\":\"Pass1234\"}"
+                        },
+                        "url": "{{baseUrl}}/auth/register"
+                    }
+                },
+                {
+                    "name": "Register Email With Dot and Plus",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test('Status 201', () => pm.response.to.have.status(201));",
+                                    "pm.test('Success true', () => pm.expect(pm.response.json().success).to.be.true);"
+                                ]
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            { "key": "Content-Type", "value": "application/json" }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\"name\":\"Special\",\"email\":\"john.doe+test@example.com\",\"password\":\"Password123\"}"
+                        },
+                        "url": "{{baseUrl}}/auth/register"
+                    }
+                },
+                {
+                    "name": "Register Email With Spaces",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test('Status 201', () => pm.response.to.have.status(201));",
+                                    "pm.test('Success true', () => pm.expect(pm.response.json().success).to.be.true);",
+                                    "pm.test('Email trimmed', () => pm.expect(pm.response.json().data.user.email).to.equal('spaces@example.com'));"
+                                ]
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            { "key": "Content-Type", "value": "application/json" }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\"name\":\"Spaces\",\"email\":\"  spaces@example.com  \",\"password\":\"Password123\"}"
+                        },
+                        "url": "{{baseUrl}}/auth/register"
+                    }
+                },
+                {
+                    "name": "Register Uppercase Email",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test('Status 201', () => pm.response.to.have.status(201));",
+                                    "pm.test('Success true', () => pm.expect(pm.response.json().success).to.be.true);",
+                                    "pm.test('Email normalized', () => pm.expect(pm.response.json().data.user.email).to.equal('uppercase@example.com'));"
+                                ]
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            { "key": "Content-Type", "value": "application/json" }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\"name\":\"Upper\",\"email\":\"UPPERCASE@EXAMPLE.COM\",\"password\":\"Password123\"}"
+                        },
+                        "url": "{{baseUrl}}/auth/register"
+                    }
+                }
+            ]
+        },
+        {
+            "name": "CLEANUP",
+            "item": [
+                {
+                    "name": "Delete Test Contact",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                                    "pm.test('Success true', () => pm.expect(pm.response.json().success).to.be.true);"
+                                ]
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "DELETE",
+                        "header": [
+                            { "key": "Authorization", "value": "Bearer {{adminToken}}" }
+                        ],
+                        "url": "{{baseUrl}}/contact/admin/messages/{{contactId}}"
+                    }
+                },
+                {
+                    "name": "Logout",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                                    "pm.test('Success true', () => pm.expect(pm.response.json().success).to.be.true);",
+                                    "pm.test('Logout message', () => pm.expect(pm.response.json().message).to.include('Выход'));"
+                                ]
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            { "key": "Authorization", "value": "Bearer {{adminToken}}" }
+                        ],
+                        "url": "{{baseUrl}}/auth/logout"
                     }
                 }
             ]

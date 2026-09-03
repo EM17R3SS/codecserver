@@ -1,5 +1,5 @@
 const contactRepository = require('../repositories/contactRepository');
-const ApiError = require('../../lib/ApiError');
+const ApiError = require('../../lib/AppError');
 
 class ContactService {
     async submitMessage(data) {

@@ -149,7 +149,7 @@ describe('Auth API', () => {
                     request(app).post('/api/v1/auth/login').send({
                         email: `test${i}@example.com`,
                         password: 'WrongPassword',
-                    })
+                    }),
                 );
             }
 

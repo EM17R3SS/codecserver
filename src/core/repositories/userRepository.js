@@ -1,5 +1,5 @@
 const User = require('../models/User');
-const AppError = require('../../errors/AppError');
+const AppError = require('../../lib/AppError');
 
 class UserRepository {
     async findAll({ page = 1, limit = 20 } = {}) {

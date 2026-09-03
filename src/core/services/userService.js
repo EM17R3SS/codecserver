@@ -1,5 +1,5 @@
 const userRepository = require('../repositories/userRepository');
-const ApiError = require('../../lib/ApiError');
+const ApiError = require('../../lib/AppError');
 
 class UserService {
     async getAllUsers(query) {
