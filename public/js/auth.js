@@ -1,4 +1,6 @@
+console.log("authjs");
 document.addEventListener('DOMContentLoaded', async () => {
+    console.log("1");
     if (!window.authManager.initialized) {
         await window.authManager.initialize();
     }
@@ -11,6 +13,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     document.addEventListener('click', function(e) {
         if (e.target.classList.contains('btn-logout')) {
+            e.preventDefault();
             handleLogout();
         }
     });
@@ -30,13 +33,16 @@ document.addEventListener('DOMContentLoaded', async () => {
             await handleLogin();
         });
     }
+    console.log("2");
+    if (window.authManager.isAuthenticated) {
+        const currentPath = window.location.pathname;
+        console.log("3");
 
-    // if (window.authManager.isAuthenticated) {
-    //     const currentPath = window.location.pathname;
-    //     if (currentPath === '/login' || currentPath === '/register') {
-    //         window.location.href = '/';
-    //     }
-    // }
+        if (currentPath === '/login' || currentPath === '/register') {
+            console.log("4");
+            window.location.href = '/';
+        }
+    }
 });
 
 function updateMenu() {
@@ -128,9 +134,8 @@ async function handleLogin() {
         if (result.success) {
             showMessage(messageDiv, 'Вход выполнен!', 'success');
             updateMenu();
-            setTimeout(() => {
-                window.location.href = result.data?.redirect || '/';
-            }, 500);
+            console.log('Redirecting to /');
+            window.location.href = '/';
         } else {
             showMessage(messageDiv, result.message || 'Ошибка входа', 'error');
         }

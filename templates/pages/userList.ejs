@@ -17,7 +17,6 @@
                     <li><a href="/about">О нас</a></li>
                     <li><a href="/contact">Контакты</a></li>
                     <li class="user-menu">
-                        <!-- Будет заполняться через JavaScript -->
                         <a href="/login">Вход</a>
                         <a href="/register">Регистрация</a>
                     </li>
@@ -40,10 +39,7 @@
                             target="_blank"
                             >Получить JSON</a
                         >
-                        <button
-                            onclick="refreshUsers()"
-                            class="btn btn-secondary"
-                        >
+                        <button id="refreshUsers" class="btn btn-secondary">
                             Обновить
                         </button>
                     </div>
@@ -99,6 +95,59 @@
                         </table>
                     </div>
                 </div>
+
+                <!-- Модальное окно для редактирования пользователя -->
+                <div id="editUserModal" class="modal" style="display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8);">
+                    <div class="modal-content" style="background: #0a0a0a; border: 2px solid #ff0000; margin: 10% auto; padding: 2rem; max-width: 400px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                            <h2 style="color: #ff0000;">Редактировать пользователя</h2>
+                            <button onclick="closeEditUserModal()" style="background: none; border: none; color: #ff0000; font-size: 2rem; cursor: pointer;">&times;</button>
+                        </div>
+                        <form id="editUserForm">
+                            <input type="hidden" id="editUserId" />
+                            <div class="form-group">
+                                <label for="editUserName" style="color: #ff0000;">Имя</label>
+                                <input type="text" id="editUserName" required />
+                            </div>
+                            <div class="form-group">
+                                <label for="editUserEmail" style="color: #ff0000;">Email</label>
+                                <input type="email" id="editUserEmail" required />
+                            </div>
+                            <div class="form-group">
+                                <label for="editUserRole" style="color: #ff0000;">Роль</label>
+                                <select id="editUserRole" style="width: 100%; padding: 0.75rem; background: #111111; border: 1px solid #ff0000; color: #ffffff; font-family: 'Share Tech Mono', monospace; font-size: 1rem;">
+                                    <option value="user">Пользователь</option>
+                                    <option value="admin">Администратор</option>
+                                </select>
+                            </div>
+                            <button type="submit" class="btn btn-primary" style="width: 100%;">Сохранить</button>
+                            <div id="editUserMessage" class="form-message" style="margin-top: 1rem;"></div>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- Модальное окно для смены пароля -->
+                <div id="changePasswordModal" class="modal" style="display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8);">
+                    <div class="modal-content" style="background: #0a0a0a; border: 2px solid #ff0000; margin: 10% auto; padding: 2rem; max-width: 400px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                            <h2 style="color: #ff0000;">Сменить пароль</h2>
+                            <button onclick="closePasswordModal()" style="background: none; border: none; color: #ff0000; font-size: 2rem; cursor: pointer;">&times;</button>
+                        </div>
+                        <form id="changePasswordForm">
+                            <input type="hidden" id="changeUserId" />
+                            <div class="form-group">
+                                <label for="newPassword" style="color: #ff0000;">Новый пароль</label>
+                                <input type="password" id="newPassword" placeholder="Новый пароль" required minlength="8" />
+                            </div>
+                            <div class="form-group">
+                                <label for="confirmPassword" style="color: #ff0000;">Подтвердите пароль</label>
+                                <input type="password" id="confirmPassword" placeholder="Подтвердите пароль" required minlength="8" />
+                            </div>
+                            <button type="submit" class="btn btn-primary" style="width: 100%;">Сохранить</button>
+                            <div id="passwordMessage" class="form-message" style="margin-top: 1rem;"></div>
+                        </form>
+                    </div>
+                </div>
             </div>
         </main>
 
@@ -109,6 +158,7 @@
         </footer>
 
         <script src="/js/authManager.js"></script>
+        <script src="/js/auth.js"></script>
         <script src="/js/main.js"></script>
     </body>
 </html>

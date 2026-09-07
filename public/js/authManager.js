@@ -62,7 +62,7 @@ class AuthManager {
                 try {
                     const valRes = await fetch('/api/v1/auth/validate-token', {
                         headers: {
-                            'Authorization': `Bearer ${token}`,
+                            'Authorization': 'Bearer ' + token,
                         },
                     });
                     if (valRes.ok) {
@@ -97,6 +97,12 @@ class AuthManager {
             this.notifyListeners();
         } catch (error) {
             console.error('AuthManager initialization error', error);
+            if (this._loadState() && this.user) {
+                this.isAuthenticated = true;
+                this.initialized = true;
+                this.notifyListeners();
+                return;
+            }
             this.user = null;
             this.isAuthenticated = false;
             this.initialized = true;
@@ -125,40 +131,51 @@ class AuthManager {
     }
 
     removeListener(callback) {
-        this.listeners = this.listeners.filter(cb => cb !== callback);
+        this.listeners = this.listeners.filter(function(cb) {
+            return cb !== callback;
+        });
     }
 
     notifyListeners() {
-        this.listeners.forEach(callback => {
+        this.listeners.forEach(function(callback) {
             try {
                 callback(this.isAuthenticated, this.user);
             } catch (e) {
                 console.error('Listener error', e);
             }
-        });
+        }.bind(this));
     }
 
     async login(email, password, csrfToken) {
         try {
+            console.log("loginmanager");
             const res = await fetch('/api/v1/auth/session-login', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
+                    'Accept': 'application/json',
                     'x-csrf-token': csrfToken,
                 },
                 credentials: 'include',
-                body: JSON.stringify({ email, password }),
+                body: JSON.stringify({ email: email, password: password }),
             });
+            if (res.status === 302) {
+                console.log("loginmanager - 302 redirect detected");
+                return { success: false, message: 'Redirect detected, check credentials' };
+            }
             const data = await res.json();
+            console.log("loginmanager");
             if (data.success) {
                 if (data.data && data.data.token) {
                     localStorage.setItem('token', data.data.token);
                 }
+                console.log("loginmanager");
                 this.user = data.data.user;
                 this.isAuthenticated = true;
+                this.initialized = true;
                 this._saveState();
                 this.notifyListeners();
-                return { success: true, data: data.data, redirect: data.redirect };
+                return { success: true, data: data.data };
             }
             return { success: false, message: data.message };
         } catch (error) {
@@ -173,7 +190,7 @@ class AuthManager {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+                    ...(token ? { 'Authorization': 'Bearer ' + token } : {}),
                 },
                 credentials: 'include',
             });
@@ -192,9 +209,10 @@ class AuthManager {
 
 window.authManager = new AuthManager();
 
-document.addEventListener('DOMContentLoaded', async () => {
-    await window.authManager.initialize();
-    if (window.updateMenu) {
-        window.updateMenu();
-    }
+document.addEventListener('DOMContentLoaded', function() {
+    window.authManager.initialize().then(function() {
+        if (window.updateMenu) {
+            window.updateMenu();
+        }
+    });
 });

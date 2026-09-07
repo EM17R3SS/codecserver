@@ -27,6 +27,7 @@ async function seed() {
         console.log('Админ создан:', admin.email);
 
         const users = [
+            { name: 'TEST', email: 'user@example.com' },
             { name: 'Иван Петров', email: 'ivan@example.com' },
             { name: 'Мария Смирнова', email: 'maria@example.com' },
             { name: 'Алексей Новиков', email: 'alex@example.com' },
