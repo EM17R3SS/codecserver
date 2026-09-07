@@ -1,4 +1,4 @@
-    <!doctype html>
+<!doctype html>
 <html lang="ru">
 <head>
     <meta charset="UTF-8" />
@@ -16,7 +16,10 @@
                 <li><a href="/">Главная</a></li>
                 <li><a href="/about">О нас</a></li>
                 <li><a href="/contact">Контакты</a></li>
-                <li><a href="/login">Вход</a></li>
+                <li class="user-menu">
+                    <a href="/login">Вход</a>
+                    <a href="/register" class="active">Регистрация</a>
+                </li>
             </ul>
         </div>
     </nav>
@@ -31,7 +34,6 @@
                     </div>
 
                     <form id="registerForm" class="login-form">
-                        <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
                         <div class="form-group">
                             <label for="name">Имя</label>
                             <input type="text" id="name" name="name" placeholder="Иван Петров" required />
@@ -47,9 +49,7 @@
                             <input type="password" id="password" name="password" placeholder="минимум 8 символов" required />
                         </div>
 
-                        <button type="submit" class="btn btn-primary btn-block">
-                            Зарегистрироваться
-                        </button>
+                        <button type="submit" class="btn btn-primary btn-block">Зарегистрироваться</button>
                     </form>
 
                     <div id="registerMessage" class="form-message" style="margin-top: 1rem;"></div>
@@ -69,6 +69,8 @@
         </div>
     </footer>
 
+    <script src="/js/authManager.js"></script>
     <script src="/js/auth.js"></script>
+    <script src="/js/main.js"></script>
 </body>
 </html>

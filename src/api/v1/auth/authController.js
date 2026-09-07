@@ -3,6 +3,47 @@ const authService = require('../../../core/services/authService');
 const logger = require('../../../config/logger');
 const config = require('../../../config/env');
 const catchAsync = require('../../../lib/catchAsync');
+const { verifyToken, generateToken } = require('../../../lib/jwt');
+const User = require('../../../core/models/User');
+
+
+const validateToken = catchAsync(async (req, res) => {
+    if (req.user) {
+        return res.json({
+            success: true,
+            user: req.user.toJSON ? req.user.toJSON() : req.user,
+        });
+    }
+
+    const token = req.headers.authorization?.split(' ')[1];
+    if (!token) {
+        return res.status(401).json({
+            success: false,
+            message: 'No token provided',
+        });
+    }
+
+    try {
+        const decoded = verifyToken(token);
+        const user = await User.findById(decoded.id);
+        if (!user || !user.isActive) {
+            return res.status(401).json({
+                success: false,
+                message: 'Invalid token',
+            });
+        }
+        return res.json({
+            success: true,
+            user: user.toJSON(),
+        });
+    } catch (error) {
+        return res.status(401).json({
+            success: false,
+            message: 'Invalid token',
+            error: error.message,
+        });
+    }
+});
 
 const register = catchAsync(async (req, res) => {
     const { user, token } = await authService.register(req.body);
@@ -37,7 +78,7 @@ const sessionLogin = (req, res, next) => {
             if (checkForClean) {
                 return res.status(401).json({
                     success: false,
-                    message: info?.message || 'Неверный email или пароль',
+                    message: info?.message || 'Invalid email or password',
                 });
             }
             return res.redirect('/login?error=invalid_credentials');
@@ -46,10 +87,10 @@ const sessionLogin = (req, res, next) => {
             if (checkForClean) {
                 return res.status(403).json({
                     success: false,
-                    message: 'Аккаунт неактивен',
+                    message: 'Account is inactive',
                 });
             }
-            return res.redirect(`/login?${new URLSearchParams({ error: 'Аккаунт неактивен' }).toString()}`);
+            return res.redirect(`/login?${new URLSearchParams({ error: 'Account is inactive' }).toString()}`);
         }
         req.login(user, loginErr => {
             if (loginErr) {
@@ -58,10 +99,16 @@ const sessionLogin = (req, res, next) => {
                 }
                 return res.redirect('/login?error=login_error');
             }
+            const token = generateToken({
+                id: user._id,
+                email: user.email,
+                role: user.role,
+            });
             logger.auth(user._id, 'login_session', true);
             if (checkForClean) {
-                res.json({ success: true, data: { user: user.toJSON() } });
+                res.json({ success: true, data: { user: user.toJSON(), token: token } });
             } else {
+                res.cookie('jwt_token', token, { httpOnly: true, secure: config.NODE_ENV === 'production', sameSite: 'lax', maxAge: 3600000 });
                 res.redirect('/');
             }
         });
@@ -70,12 +117,20 @@ const sessionLogin = (req, res, next) => {
 
 const logout = (req, res, next) => {
     const userId = req.user?._id || 'unknown';
+
+    if (!req.user) {
+        return res.status(401).json({
+            success: false,
+            message: 'Not authenticated',
+        });
+    }
+
     req.logout(err => {
         if (err) return next(err);
         req.session.destroy(() => {
             res.clearCookie('connect.sid');
             logger.auth(userId, 'logout', true);
-            res.json({ success: true, message: 'Выход выполнен' });
+            res.json({ success: true, message: 'Logout successful' });
         });
     });
 };
@@ -132,4 +187,5 @@ module.exports = {
     getSessionInfo,
     googleAuth,
     googleCallback,
+    validateToken,
 };

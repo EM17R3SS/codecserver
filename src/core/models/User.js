@@ -4,23 +4,23 @@ const userSchema = new mongoose.Schema(
     {
         name: {
             type: String,
-            required: [true, 'Имя обязательно'],
+            required: [true, 'Name is required'],
             trim: true,
-            minlength: [2, 'Имя должно быть минимум 2 символа'],
-            maxlength: [25, 'Имя не должно превышать 25 символов'],
+            minlength: [2, 'Name must be at least 2 characters'],
+            maxlength: [25, 'Name cannot exceed 25 characters'],
         },
         email: {
             type: String,
-            required: [true, 'Email обязателен'],
+            required: [true, 'Email is required'],
             unique: true,
             lowercase: true,
             trim: true,
             set: v => (v ? v.toLowerCase().trim() : v),
-            match: [/^[^\s@]+@[^\s@]+\.[^\s@]+$/, 'Неверный формат email'],
+            match: [/^[^\s@]+@[^\s@]+\.[^\s@]+$/, 'Invalid email format'],
         },
         password: {
             type: String,
-            minlength: [8, 'Пароль должен быть минимум 8 символов'],
+            minlength: [8, 'Password must be at least 8 characters'],
             required: function() {
                 return !this.googleId || this.googleId === null;
             },

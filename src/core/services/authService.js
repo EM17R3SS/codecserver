@@ -10,7 +10,7 @@ class AuthService {
         const existing = await User.findOne({ email: normalizedEmail });
         if (existing) {
             throw ApiError.badRequest(
-                'Пользователь с таким Email уже существует',
+                'User with this Email already exists',
             );
         }
 
@@ -43,7 +43,7 @@ class AuthService {
         if (user.lockUntil && user.lockUntil > Date.now()) {
             const minutes = Math.ceil((user.lockUntil - Date.now()) / 60000);
             throw ApiError.tooManyRequests(
-                `Аккаунт заблокирован. Попробуйте через ${minutes} мин.`,
+                `Account is locked. Try again in ${minutes} min.`,
             );
         }
 
@@ -52,7 +52,7 @@ class AuthService {
 
         if (!isMatch) {
             await user.incrementLoginAttempts(config);
-            throw ApiError.unauthorized('Неверный email или пароль');
+            throw ApiError.unauthorized('Invalid email or password');
         }
 
         if (user.failedLoginAttempts > 0) {

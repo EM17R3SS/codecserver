@@ -8,22 +8,31 @@ const globalLimiter = rateLimit({
     legacyHeaders: false,
     message: {
         success: false,
-        message: 'Слишком много запросов с этого IP. Попробуйте позже.',
+        message: 'Too many requests from this IP. Please try again later.',
     },
 });
 
 const authLimiter = rateLimit({
-    windowMs: config.AUTH_RATE_LIMIT_WINDOW_MS,
-    //max: config.AUTH_RATE_LIMIT_MAX,
-    max: 1000,
+    windowMs: 15 * 60 * 1000,
+    max: 100,
     standardHeaders: true,
     legacyHeaders: false,
     skipSuccessfulRequests: true,
     message: {
         success: false,
-        message:
-            'Слишком много попыток входа. Попробуйте снова через 15 минут.',
+        message: 'Too many login attempts. Please try again in 15 minutes.',
     },
 });
 
-module.exports = { globalLimiter, authLimiter };
+const apiLimiter = rateLimit({
+    windowMs: 60 * 1000,
+    max: 30,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: {
+        success: false,
+        message: 'API rate limit exceeded. Please slow down.',
+    },
+});
+
+module.exports = { globalLimiter, authLimiter, apiLimiter };

@@ -14,11 +14,12 @@
                 </div>
                 <ul class="nav-menu">
                     <li><a href="/">Главная</a></li>
-                    <li>
-                        <a href="/about" class="active">О нас</a>
-                    </li>
+                    <li><a href="/about" class="active">О нас</a></li>
                     <li><a href="/contact">Контакты</a></li>
-                    <li><a href="/login">Вход</a></li>
+                    <li class="user-menu">
+                        <a href="/login">Вход</a>
+                        <a href="/register">Регистрация</a>
+                    </li>
                 </ul>
             </div>
         </nav>
@@ -42,9 +43,7 @@
 
                         <h3>Наши достижения:</h3>
                         <ul class="achievements">
-                            <li>
-                                <%=experience%> успешной работы в веб-разработке
-                            </li>
+                            <li><%=experience%> успешной работы в веб-разработке</li>
                             <li><%=projects%> реализованных проектов</li>
                             <li>100% довольных клиентов</li>
                             <li>24/7 техническая поддержка</li>
@@ -80,5 +79,8 @@
                 <p>&copy; 2026 Node.js HTTP Server. Все права защищены.</p>
             </div>
         </footer>
+
+        <script src="/js/authManager.js"></script>
+        <script src="/js/main.js"></script>
     </body>
 </html>

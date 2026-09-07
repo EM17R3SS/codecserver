@@ -4,23 +4,23 @@ const contactMessageSchema = new mongoose.Schema(
     {
         name: {
             type: String,
-            required: [true, 'Имя обязательно'],
+            required: [true, 'Name is required'],
             trim: true,
-            minlength: [2, 'Имя должно быть минимум 2 символа'],
-            maxlength: [50, 'Имя не должно превышать 50 символов'],
+            minlength: [2, 'Name must be at least 2 characters'],
+            maxlength: [50, 'Name cannot exceed 50 characters'],
         },
         email: {
             type: String,
-            required: [true, 'Email обязателен'],
+            required: [true, 'Email is required'],
             lowercase: true,
             trim: true,
-            match: [/^[^\s@]+@[^\s@]+\.[^\s@]+$/, 'Неверный формат email'],
+            match: [/^[^\s@]+@[^\s@]+\.[^\s@]+$/, 'Invalid email format'],
         },
         message: {
             type: String,
-            required: [true, 'Сообщение обязательно'],
-            minlength: [10, 'Сообщение должно быть минимум 10 символов'],
-            maxlength: [1000, 'Сообщение не должно превышать 1000 символов'],
+            required: [true, 'Message is required'],
+            minlength: [10, 'Message must be at least 10 characters'],
+            maxlength: [1000, 'Message cannot exceed 1000 characters'],
         },
         status: {
             type: String,

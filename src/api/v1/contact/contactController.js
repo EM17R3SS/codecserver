@@ -22,7 +22,7 @@ const submitContact = catchAsync(async (req, res) => {
 
     res.status(201).json({
         success: true,
-        message: 'Сообщение успешно отправлено. Мы свяжемся с вами в ближайшее время.',
+        message: 'Message submitted successfully. We will get back to you soon.',
         data: {
             id: savedMessage._id,
         },
@@ -67,7 +67,7 @@ const markAsRead = catchAsync(async (req, res) => {
 
     res.json({
         success: true,
-        message: 'Сообщение отмечено как прочитанное',
+        message: 'Message marked as read',
         data: message,
     });
 });
@@ -79,7 +79,7 @@ const markAsReplied = catchAsync(async (req, res) => {
 
     res.json({
         success: true,
-        message: 'Сообщение отмечено как ответено',
+        message: 'Message marked as replied',
         data: message,
     });
 });
@@ -91,7 +91,7 @@ const deleteMessage = catchAsync(async (req, res) => {
 
     res.json({
         success: true,
-        message: 'Сообщение удалено',
+        message: 'Message deleted',
     });
 });
 
@@ -104,7 +104,7 @@ const deleteMessages = catchAsync(async (req, res) => {
 
     res.json({
         success: true,
-        message: `Удалено ${ids.length} сообщений`,
+        message: `Deleted ${ids.length} messages`,
     });
 });
 

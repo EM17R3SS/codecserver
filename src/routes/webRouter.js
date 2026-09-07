@@ -11,17 +11,17 @@ router.use(generateCsrfToken);
 
 router.get('/', (req, res) => {
     res.render('home', {
-        title: 'Главная страница',
-        content: 'Добро пожаловать на наш сайт',
+        title: 'Home',
+        content: 'Welcome to our website',
         user: req.user || null,
     });
 });
 
 router.get('/about', (req, res) => {
     res.render('about', {
-        title: 'О нас',
+        title: 'About Us',
         companyName: 'NodeJS Server',
-        experience: '3 года',
+        experience: '3 years',
         projects: '25+',
         user: req.user || null,
     });
@@ -29,24 +29,24 @@ router.get('/about', (req, res) => {
 
 router.get('/contact', (req, res) => {
     res.render('contact', {
-        title: 'Контакты',
+        title: 'Contact Us',
         email: 'info@example.com',
         phone: '+7 (999) 123-45-67',
         user: req.user || null,
     });
 });
 
-router.get('/login', ensureGuest, (req, res) => {
+router.get('/login', (req, res) => {
     res.render('login', {
-        title: 'Вход в систему',
+        title: 'Login',
         csrfToken: res.locals.csrfToken,
         user: null,
     });
 });
 
-router.get('/register', ensureGuest, (req, res) => {
+router.get('/register', (req, res) => {
     res.render('register', {
-        title: 'Регистрация',
+        title: 'Register',
         csrfToken: res.locals.csrfToken,
         user: null,
     });
@@ -54,7 +54,7 @@ router.get('/register', ensureGuest, (req, res) => {
 
 router.get('/users', ensureAuthenticated, ensureRole('admin'), (req, res) => {
     res.render('userList', {
-        title: 'Управление пользователями',
+        title: 'Manage Users',
         userCount: 0,
         user: req.user,
     });

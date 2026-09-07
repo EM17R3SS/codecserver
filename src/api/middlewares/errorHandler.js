@@ -5,29 +5,29 @@ function errorHandler(err, req, res, _next) {
     logger.logError(err, req);
 
     let statusCode = err.statusCode || 500;
-    let message = err.message || 'Внутренняя ошибка сервера';
+    let message = err.message || 'Internal Server Error';
     let errors = err.errors && err.errors.length ? err.errors : undefined;
 
     if (err.name === 'CastError') {
         statusCode = 400;
-        message = `Некорректный идентификатор: ${err.value}`;
+        message = `Invalid identifier: ${err.value}`;
     }
 
     if (err.name === 'ValidationError') {
         statusCode = 400;
-        message = 'Ошибка валидации данных';
+        message = 'Validation error';
         errors = Object.values(err.errors).map(e => e.message);
     }
 
     if (err.code === 11000) {
         statusCode = 400;
         const field = Object.keys(err.keyValue || {})[0];
-        message = `Значение поля "${field}" уже используется`;
+        message = `Field "${field}" is already exists`;
     }
 
     if (err.name === 'JsonWebTokenError' || err.name === 'TokenExpiredError') {
         statusCode = 401;
-        message = 'Неверный или просроченный токен';
+        message = 'Invalid or expired token';
     }
 
     res.status(statusCode).json({

@@ -10,20 +10,20 @@ class UserService {
 
     async getUserById(id) {
         const user = await userRepository.findById(id);
-        if (!user) throw ApiError.notFound('Пользователь не найден');
+        if (!user) throw ApiError.notFound('User not found');
         return user;
     }
 
     async createUser(userData) {
         if (!userData.name || !userData.email) {
-            throw ApiError.badRequest('Имя и Email обязательны');
+            throw ApiError.badRequest('Name and Email are required');
         }
 
         const normalizedEmail = userData.email.toLowerCase().trim();
         const existing = await userRepository.findByEmail(normalizedEmail);
         if (existing) {
             throw ApiError.badRequest(
-                'Пользователь с таким Email уже существует',
+                'User with this Email already exists',
             );
         }
 
@@ -35,7 +35,7 @@ class UserService {
 
     async updateUser(id, userData) {
         const user = await userRepository.findById(id);
-        if (!user) throw ApiError.notFound('Пользователь не найден');
+        if (!user) throw ApiError.notFound('User not found');
 
         if (userData.email) {
             const normalizedEmail = userData.email.toLowerCase().trim();
@@ -44,7 +44,7 @@ class UserService {
                     await userRepository.findByEmail(normalizedEmail);
                 if (existing) {
                     throw ApiError.badRequest(
-                        'Пользователь с таким Email уже существует',
+                        'User with this Email already exists',
                     );
                 }
             }
@@ -56,7 +56,7 @@ class UserService {
 
     async deleteUser(id) {
         const user = await userRepository.findById(id);
-        if (!user) throw ApiError.notFound('Пользователь не найден');
+        if (!user) throw ApiError.notFound('User not found');
         return await userRepository.delete(id);
     }
 }

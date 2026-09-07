@@ -12,7 +12,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (!name || !email || !message) {
             if (messageDiv) {
-                messageDiv.innerHTML = '<p style="color: #ff0000;">Заполните все поля</p>';
+                messageDiv.innerHTML = '<p style="color: #ff0000;">Fill in all fields</p>';
             }
             return;
         }
@@ -28,15 +28,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
             if (messageDiv) {
                 if (data.success) {
-                    messageDiv.innerHTML = '<p style="color: #00ff00;">Спасибо! Ваше сообщение отправлено.</p>';
+                    messageDiv.innerHTML = '<p style="color: #00ff00;">Your message has been sent.</p>';
                     feedbackForm.reset();
                 } else {
-                    messageDiv.innerHTML = `<p style="color: #ff0000;">${data.message || 'Ошибка отправки'}</p>`;
+                    messageDiv.innerHTML = `<p style="color: #ff0000;">${data.message || 'Error sending message'}</p>`;
                 }
             }
         } catch (error) {
             if (messageDiv) {
-                messageDiv.innerHTML = '<p style="color: #ff0000;">error!</p>';
+                messageDiv.innerHTML = '<p style="color: #ff0000;">Connection error</p>';
             }
             console.error('Contact error:', error);
         }

@@ -4,7 +4,7 @@ const validate = schema => (req, res, next) => {
         const errors = error.details.map(d => d.message);
         return res.status(400).json({
             success: false,
-            message: 'Ошибка валидации данных',
+            message: 'Validation error',
             errors,
         });
     }

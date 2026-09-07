@@ -20,12 +20,12 @@ passport.use(
 
                 if (!user) {
                     return done(null, false, {
-                        message: 'Неверный email или пароль',
+                        message: 'Invalid email or password',
                     });
                 }
                 if (!user.isActive) {
                     return done(null, false, {
-                        message: 'Аккаунт заблокирован',
+                        message: 'Account is inactive',
                     });
                 }
                 if (user.lockUntil && user.lockUntil > Date.now()) {
@@ -33,7 +33,7 @@ passport.use(
                         (user.lockUntil - Date.now()) / 60000,
                     );
                     return done(null, false, {
-                        message: `Аккаунт временно заблокирован. Попробуйте через ${minutes} мин.`,
+                        message: `Account temporarily locked. Try again in ${minutes} minutes.`,
                     });
                 }
 
@@ -42,7 +42,7 @@ passport.use(
                 if (!isMatch) {
                     await user.incrementLoginAttempts(config);
                     return done(null, false, {
-                        message: 'Неверный email или пароль',
+                        message: 'Invalid email or password',
                     });
                 }
 
@@ -94,14 +94,14 @@ if (config.GOOGLE_CLIENT_ID && config.GOOGLE_CLIENT_SECRET) {
 
                     if (!email) {
                         logger.warn('Google OAuth: no email provided');
-                        return done(null, false, { message: 'Email не получен от Google' });
+                        return done(null, false, { message: 'Email not received from Google' });
                     }
 
                     let user = await User.findOne({ googleId: profile.id });
 
                     if (user) {
                         if (!user.isActive) {
-                            return done(null, false, { message: 'Аккаунт деактивирован' });
+                            return done(null, false, { message: 'Account deactivated' });
                         }
                         logger.info(`Google OAuth: existing user ${user.email}`);
                         return done(null, user);
@@ -134,7 +134,7 @@ if (config.GOOGLE_CLIENT_ID && config.GOOGLE_CLIENT_SECRET) {
             },
         ),
     );
-    logger.info('Google OAuth стратегия подключена');
+    logger.info('Google OAuth strategy successfully connected');
 } else {
     logger.warn('Google OAuth не настроен (нет CLIENT_ID/SECRET в .env)');
 }

@@ -33,22 +33,22 @@ const createUser = catchAsync(async (req, res) => {
         payload.password = await hashPassword(generateRandomPassword());
     }
     const user = await userService.createUser(payload);
-    logger.info(`Admin ${req.user.email} создал пользователя ${user.email}`);
+    logger.info(`Admin ${req.user.email} created user ${user.email}`);
     res.status(201).json({ success: true, data: user });
 });
 
 const updateUser = catchAsync(async (req, res) => {
     const user = await userService.updateUser(req.params.id, req.body);
     logger.info(
-        `Admin ${req.user.email} обновил пользователя ${req.params.id}`,
+        `Admin ${req.user.email} updated user ${req.params.id}`,
     );
     res.json({ success: true, data: user });
 });
 
 const deleteUser = catchAsync(async (req, res) => {
     await userService.deleteUser(req.params.id);
-    logger.warn(`Admin ${req.user.email} удалил пользователя ${req.params.id}`);
-    res.json({ success: true, message: 'Пользователь удалён' });
+    logger.warn(`Admin ${req.user.email} deleted user ${req.params.id}`);
+    res.json({ success: true, message: 'User deleted' });
 });
 
 module.exports = {

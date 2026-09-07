@@ -1,7 +1,7 @@
 function notFound(req, res) {
     res.status(404).json({
         success: false,
-        message: `Путь ${req.originalUrl} не найден`,
+        message: `Path ${req.originalUrl} not found`,
     });
 }
 

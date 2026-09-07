@@ -1,4 +1,3 @@
-<!-- templates/pages/login.ejs -->
 <!doctype html>
 <html lang="ru">
 <head>
@@ -17,7 +16,10 @@
                 <li><a href="/">Главная</a></li>
                 <li><a href="/about">О нас</a></li>
                 <li><a href="/contact">Контакты</a></li>
-                <li><a href="/login" class="active">Вход</a></li>
+                <li class="user-menu">
+                    <a href="/login" class="active">Вход</a>
+                    <a href="/register">Регистрация</a>
+                </li>
             </ul>
         </div>
     </nav>
@@ -44,10 +46,9 @@
                             <input type="password" id="password" name="password" placeholder="••••••••" required />
                         </div>
 
-                        <button type="submit" class="btn btn-primary btn-block">
-                            Войти
-                        </button>
+                        <button type="submit" class="btn btn-primary btn-block">Войти</button>
                     </form>
+
                     <div class="login-oauth" style="margin-top: 1.5rem; text-align: center;">
                         <p style="color: #666; margin-bottom: 0.5rem;">Или войдите через</p>
                         <a href="/api/v1/auth/google" class="btn btn-google" style="
@@ -76,12 +77,10 @@
                         <div class="info-box">
                             <h4>Тестовые данные:</h4>
                             <p><strong>Email:</strong> admin@example.com</p>
-                            <p><strong>Пароль:</strong> admin123</p>
+                            <p><strong>Пароль:</strong> Admin123!</p>
                             <hr />
-                            <p><strong>Email:</strong> ivan@example.com</p>
-                            <p><strong>Пароль:</strong> password123</p>
-                            <hr />
-                            <p><small>Сначала запустите <code>npm run seed</code></small></p>
+                            <p><strong>Email:</strong> user@example.com</p>
+                            <p><strong>Пароль:</strong> User123!</p>
                         </div>
                     </div>
 
@@ -100,6 +99,8 @@
         </div>
     </footer>
 
+    <script src="/js/authManager.js"></script>
     <script src="/js/auth.js"></script>
+    <script src="/js/main.js"></script>
 </body>
 </html>

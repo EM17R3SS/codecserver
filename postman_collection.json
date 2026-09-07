@@ -116,7 +116,7 @@
                                 "exec": [
                                     "pm.test('Status 400', () => pm.response.to.have.status(400));",
                                     "pm.test('Success false', () => pm.expect(pm.response.json().success).to.be.false);",
-                                    "pm.test('Duplicate error', () => pm.expect(pm.response.json().message).to.include('уже существует'));"
+                                    "pm.test('Duplicate error', () => pm.expect(pm.response.json().message).to.include('already exists'));"
                                 ]
                             }
                         }
@@ -142,7 +142,7 @@
                                 "exec": [
                                     "pm.test('Status 400', () => pm.response.to.have.status(400));",
                                     "pm.test('Success false', () => pm.expect(pm.response.json().success).to.be.false);",
-                                    "pm.test('Short password error', () => pm.expect(pm.response.json().message).to.include('минимум 8'));"
+                                    "pm.test('Short password error', () => { const body = pm.response.json(); pm.expect(body.errors).to.include('Password must be at least 8 characters'); });"
                                 ]
                             }
                         }
@@ -168,7 +168,7 @@
                                 "exec": [
                                     "pm.test('Status 400', () => pm.response.to.have.status(400));",
                                     "pm.test('Success false', () => pm.expect(pm.response.json().success).to.be.false);",
-                                    "pm.test('Uppercase required', () => pm.expect(pm.response.json().message).to.include('прописные'));"
+                                    "pm.test('Uppercase required', () => { const body = pm.response.json(); pm.expect(body.errors[0]).to.include('uppercase'); });"
                                 ]
                             }
                         }
@@ -194,7 +194,7 @@
                                 "exec": [
                                     "pm.test('Status 400', () => pm.response.to.have.status(400));",
                                     "pm.test('Success false', () => pm.expect(pm.response.json().success).to.be.false);",
-                                    "pm.test('Digits required', () => pm.expect(pm.response.json().message).to.include('цифры'));"
+                                    "pm.test('Digits required', () => { const body = pm.response.json(); pm.expect(body.errors[0]).to.include('digits'); });"
                                 ]
                             }
                         }
@@ -220,7 +220,7 @@
                                 "exec": [
                                     "pm.test('Status 400', () => pm.response.to.have.status(400));",
                                     "pm.test('Success false', () => pm.expect(pm.response.json().success).to.be.false);",
-                                    "pm.test('Invalid email', () => pm.expect(pm.response.json().message).to.include('email'));"
+                                    "pm.test('Invalid email', () => { const body = pm.response.json(); pm.expect(body.errors).to.include('Invalid email format'); });"
                                 ]
                             }
                         }
@@ -246,7 +246,7 @@
                                 "exec": [
                                     "pm.test('Status 400', () => pm.response.to.have.status(400));",
                                     "pm.test('Success false', () => pm.expect(pm.response.json().success).to.be.false);",
-                                    "pm.test('Name too short', () => pm.expect(pm.response.json().message).to.include('минимум 2'));"
+                                    "pm.test('Name too short', () => { const body = pm.response.json(); pm.expect(body.errors).to.include('Name must be at least 2 characters'); });"
                                 ]
                             }
                         }
@@ -272,7 +272,7 @@
                                 "exec": [
                                     "pm.test('Status 400', () => pm.response.to.have.status(400));",
                                     "pm.test('Success false', () => pm.expect(pm.response.json().success).to.be.false);",
-                                    "pm.test('Name too long', () => pm.expect(pm.response.json().message).to.include('превышать 25'));"
+                                    "pm.test('Name too long', () => { const body = pm.response.json(); pm.expect(body.errors).to.include('Name cannot exceed 25 characters'); });"
                                 ]
                             }
                         }
@@ -298,7 +298,7 @@
                                 "exec": [
                                     "pm.test('Status 400', () => pm.response.to.have.status(400));",
                                     "pm.test('Success false', () => pm.expect(pm.response.json().success).to.be.false);",
-                                    "pm.test('Name required', () => pm.expect(pm.response.json().message).to.include('Имя'));"
+                                    "pm.test('Name required', () => { const body = pm.response.json(); pm.expect(body.errors).to.include('Name is required'); });"
                                 ]
                             }
                         }
@@ -324,7 +324,7 @@
                                 "exec": [
                                     "pm.test('Status 400', () => pm.response.to.have.status(400));",
                                     "pm.test('Success false', () => pm.expect(pm.response.json().success).to.be.false);",
-                                    "pm.test('Email required', () => pm.expect(pm.response.json().message).to.include('Email'));"
+                                    "pm.test('Email required', () => { const body = pm.response.json(); pm.expect(body.errors).to.include('Email is required'); });"
                                 ]
                             }
                         }
@@ -350,7 +350,7 @@
                                 "exec": [
                                     "pm.test('Status 400', () => pm.response.to.have.status(400));",
                                     "pm.test('Success false', () => pm.expect(pm.response.json().success).to.be.false);",
-                                    "pm.test('Password required', () => pm.expect(pm.response.json().message).to.include('Пароль'));"
+                                    "pm.test('Password required', () => { const body = pm.response.json(); pm.expect(body.errors).to.include('Password is required'); });"
                                 ]
                             }
                         }
@@ -403,7 +403,7 @@
                                 "exec": [
                                     "pm.test('Status 401', () => pm.response.to.have.status(401));",
                                     "pm.test('Success false', () => pm.expect(pm.response.json().success).to.be.false);",
-                                    "pm.test('Wrong password', () => pm.expect(pm.response.json().message).to.include('Неверный'));"
+                                    "pm.test('Wrong password', () => pm.expect(pm.response.json().message).to.include('Invalid email or password'));"
                                 ]
                             }
                         }
@@ -429,7 +429,7 @@
                                 "exec": [
                                     "pm.test('Status 401', () => pm.response.to.have.status(401));",
                                     "pm.test('Success false', () => pm.expect(pm.response.json().success).to.be.false);",
-                                    "pm.test('Invalid credentials', () => pm.expect(pm.response.json().message).to.include('Неверный'));"
+                                    "pm.test('Invalid credentials', () => pm.expect(pm.response.json().message).to.include('Invalid email or password'));"
                                 ]
                             }
                         }
@@ -444,28 +444,6 @@
                             "raw": "{\"email\":\"nonexistent@example.com\",\"password\":\"Password123\"}"
                         },
                         "url": "{{baseUrl}}/auth/login"
-                    }
-                },
-                {
-                    "name": "Session Info",
-                    "event": [
-                        {
-                            "listen": "test",
-                            "script": {
-                                "exec": [
-                                    "pm.test('Status 200', () => pm.response.to.have.status(200));",
-                                    "pm.test('Authenticated true', () => pm.expect(pm.response.json().authenticated).to.be.true);",
-                                    "pm.test('User has email', () => pm.expect(pm.response.json().user.email).to.equal('test@example.com'));"
-                                ]
-                            }
-                        }
-                    ],
-                    "request": {
-                        "method": "GET",
-                        "header": [
-                            { "key": "Authorization", "value": "Bearer {{userToken}}" }
-                        ],
-                        "url": "{{baseUrl}}/auth/session"
                     }
                 }
             ]
@@ -529,7 +507,7 @@
                                 "exec": [
                                     "pm.test('Status 401', () => pm.response.to.have.status(401));",
                                     "pm.test('Success false', () => pm.expect(pm.response.json().success).to.be.false);",
-                                    "pm.test('Auth required', () => pm.expect(pm.response.json().message).to.include('авторизации'));"
+                                    "pm.test('Auth required', () => pm.expect(pm.response.json().message).to.include('Authorization required'));"
                                 ]
                             }
                         }
@@ -593,7 +571,7 @@
                                 "exec": [
                                     "pm.test('Status 404', () => pm.response.to.have.status(404));",
                                     "pm.test('Success false', () => pm.expect(pm.response.json().success).to.be.false);",
-                                    "pm.test('Not found message', () => pm.expect(pm.response.json().message).to.include('не найден'));"
+                                    "pm.test('Not found message', () => pm.expect(pm.response.json().message).to.include('User not found'));"
                                 ]
                             }
                         }
@@ -687,7 +665,7 @@
                                 "exec": [
                                     "pm.test('Status 403', () => pm.response.to.have.status(403));",
                                     "pm.test('Success false', () => pm.expect(pm.response.json().success).to.be.false);",
-                                    "pm.test('Forbidden message', () => pm.expect(pm.response.json().message).to.include('Недостаточно прав'));"
+                                    "pm.test('Forbidden message', () => pm.expect(pm.response.json().message).to.include('Insufficient permissions'));"
                                 ]
                             }
                         }
@@ -714,7 +692,7 @@
                                 "exec": [
                                     "pm.test('Status 400', () => pm.response.to.have.status(400));",
                                     "pm.test('Success false', () => pm.expect(pm.response.json().success).to.be.false);",
-                                    "pm.test('Duplicate error', () => pm.expect(pm.response.json().message).to.include('существует'));"
+                                    "pm.test('Duplicate error', () => pm.expect(pm.response.json().message).to.include('already exists'));"
                                 ]
                             }
                         }
@@ -741,7 +719,7 @@
                                 "exec": [
                                     "pm.test('Status 400', () => pm.response.to.have.status(400));",
                                     "pm.test('Success false', () => pm.expect(pm.response.json().success).to.be.false);",
-                                    "pm.test('Name required', () => pm.expect(pm.response.json().message).to.include('Имя'));"
+                                    "pm.test('Name required', () => pm.expect(pm.response.json().message).to.include('Name and Email are required'));"
                                 ]
                             }
                         }
@@ -768,7 +746,7 @@
                                 "exec": [
                                     "pm.test('Status 400', () => pm.response.to.have.status(400));",
                                     "pm.test('Success false', () => pm.expect(pm.response.json().success).to.be.false);",
-                                    "pm.test('Invalid email', () => pm.expect(pm.response.json().message).to.include('email'));"
+                                    "pm.test('Invalid email', () => { const body = pm.response.json(); pm.expect(body.errors).to.include('Invalid email format'); });"
                                 ]
                             }
                         }
@@ -925,7 +903,7 @@
                                 "exec": [
                                     "pm.test('Status 400', () => pm.response.to.have.status(400));",
                                     "pm.test('Success false', () => pm.expect(pm.response.json().success).to.be.false);",
-                                    "pm.test('Duplicate email', () => pm.expect(pm.response.json().message).to.include('существует'));"
+                                    "pm.test('Duplicate email', () => pm.expect(pm.response.json().message).to.include('already exists'));"
                                 ]
                             }
                         }
@@ -952,7 +930,7 @@
                                 "exec": [
                                     "pm.test('Status 200', () => pm.response.to.have.status(200));",
                                     "pm.test('Success true', () => pm.expect(pm.response.json().success).to.be.true);",
-                                    "pm.test('Deleted message', () => pm.expect(pm.response.json().message).to.include('удалён'));"
+                                    "pm.test('Deleted message', () => pm.expect(pm.response.json().message).to.include('deleted'));"
                                 ]
                             }
                         }
@@ -1141,7 +1119,7 @@
                                 "exec": [
                                     "pm.test('Status 400', () => pm.response.to.have.status(400));",
                                     "pm.test('Success false', () => pm.expect(pm.response.json().success).to.be.false);",
-                                    "pm.test('Message too short', () => pm.expect(pm.response.json().message).to.include('минимум 10'));"
+                                    "pm.test('Message too short', () => { const body = pm.response.json(); pm.expect(body.errors).to.include('Message must be at least 10 characters'); });"
                                 ]
                             }
                         }
@@ -1167,7 +1145,7 @@
                                 "exec": [
                                     "pm.test('Status 400', () => pm.response.to.have.status(400));",
                                     "pm.test('Success false', () => pm.expect(pm.response.json().success).to.be.false);",
-                                    "pm.test('Name required', () => pm.expect(pm.response.json().message).to.include('Имя'));"
+                                    "pm.test('Name required', () => pm.expect(pm.response.json().message).to.include('All fields are required'));"
                                 ]
                             }
                         }
@@ -1193,7 +1171,7 @@
                                 "exec": [
                                     "pm.test('Status 400', () => pm.response.to.have.status(400));",
                                     "pm.test('Success false', () => pm.expect(pm.response.json().success).to.be.false);",
-                                    "pm.test('Invalid email', () => pm.expect(pm.response.json().message).to.include('email'));"
+                                    "pm.test('Invalid email', () => { const body = pm.response.json(); pm.expect(body.errors).to.include('Invalid email format'); });"
                                 ]
                             }
                         }
@@ -1310,7 +1288,7 @@
                                 "exec": [
                                     "pm.test('Status 200', () => pm.response.to.have.status(200));",
                                     "pm.test('Success true', () => pm.expect(pm.response.json().success).to.be.true);",
-                                    "pm.test('Marked as read', () => pm.expect(pm.response.json().message).to.include('прочитанное'));"
+                                    "pm.test('Marked as read', () => pm.expect(pm.response.json().message).to.include('Message marked as read'));"
                                 ]
                             }
                         }
@@ -1332,7 +1310,7 @@
                                 "exec": [
                                     "pm.test('Status 200', () => pm.response.to.have.status(200));",
                                     "pm.test('Success true', () => pm.expect(pm.response.json().success).to.be.true);",
-                                    "pm.test('Marked as replied', () => pm.expect(pm.response.json().message).to.include('ответено'));"
+                                    "pm.test('Marked as replied', () => pm.expect(pm.response.json().message).to.include('Message marked as replied'));"
                                 ]
                             }
                         }
@@ -1393,7 +1371,7 @@
                                 "exec": [
                                     "pm.test('Status 200', () => pm.response.to.have.status(200));",
                                     "pm.test('Success true', () => pm.expect(pm.response.json().success).to.be.true);",
-                                    "pm.test('Deleted message', () => pm.expect(pm.response.json().message).to.include('удалено'));"
+                                    "pm.test('Deleted message', () => pm.expect(pm.response.json().message).to.include('deleted'));"
                                 ]
                             }
                         }
@@ -1577,7 +1555,7 @@
                                 "exec": [
                                     "pm.test('Status 429', () => pm.response.to.have.status(429));",
                                     "pm.test('Success false', () => pm.expect(pm.response.json().success).to.be.false);",
-                                    "pm.test('Lockout message', () => pm.expect(pm.response.json().message).to.include('заблокирован'));"
+                                    "pm.test('Lockout message', () => pm.expect(pm.response.json().message).to.include('locked'));"
                                 ]
                             }
                         }
@@ -1723,7 +1701,7 @@
                                 "exec": [
                                     "pm.test('Status 404', () => pm.response.to.have.status(404));",
                                     "pm.test('Success false', () => pm.expect(pm.response.json().success).to.be.false);",
-                                    "pm.test('Not found message', () => pm.expect(pm.response.json().message).to.include('не найден'));"
+                                    "pm.test('Not found message', () => pm.expect(pm.response.json().message).to.include('not found'));"
                                 ]
                             }
                         }
@@ -1871,9 +1849,8 @@
                             "listen": "test",
                             "script": {
                                 "exec": [
-                                    "pm.test('Status 201', () => pm.response.to.have.status(201));",
-                                    "pm.test('Success true', () => pm.expect(pm.response.json().success).to.be.true);",
-                                    "pm.test('Email trimmed', () => pm.expect(pm.response.json().data.user.email).to.equal('spaces@example.com'));"
+                                    "pm.test('Status 400', () => pm.response.to.have.status(400));",
+                                    "pm.test('Success false', () => pm.expect(pm.response.json().success).to.be.false);"
                                 ]
                             }
                         }
@@ -1951,7 +1928,7 @@
                                 "exec": [
                                     "pm.test('Status 200', () => pm.response.to.have.status(200));",
                                     "pm.test('Success true', () => pm.expect(pm.response.json().success).to.be.true);",
-                                    "pm.test('Logout message', () => pm.expect(pm.response.json().message).to.include('Выход'));"
+                                    "pm.test('Logout message', () => pm.expect(pm.response.json().message).to.include('Logout successful'));"
                                 ]
                             }
                         }

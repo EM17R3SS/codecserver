@@ -2,14 +2,14 @@ const Joi = require('joi');
 
 const registerSchema = Joi.object({
     name: Joi.string().min(2).max(25).required().messages({
-        'string.empty': 'Имя обязательно',
-        'string.min': 'Имя должно быть минимум 2 символа',
-        'string.max': 'Имя не должно превышать 25 символов',
-        'any.required': 'Имя обязательно',
+        'string.empty': 'Name is required',
+        'string.min': 'Name must be at least 2 characters',
+        'string.max': 'Name cannot exceed 25 characters',
+        'any.required': 'Name is required',
     }),
     email: Joi.string().email().required().messages({
-        'string.email': 'Неверный формат email',
-        'any.required': 'Email обязателен',
+        'string.email': 'Invalid email format',
+        'any.required': 'Email is required',
     }),
     password: Joi.string()
         .min(8)
@@ -17,21 +17,22 @@ const registerSchema = Joi.object({
         .pattern(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/)
         .required()
         .messages({
-            'string.min': 'Пароль должен быть минимум 8 символов',
-            'string.max': 'Пароль не должен превышать 128 символов',
-            'string.pattern.base': 'Пароль должен содержать: прописные буквы, строчные буквы и цифры',
-            'any.required': 'Пароль обязателен',
+            'string.min': 'Password must be at least 8 characters',
+            'string.max': 'Password cannot exceed 128 characters',
+            'string.pattern.base': 'Password must contain: uppercase letters, lowercase letters and digits',
+            'any.required': 'Password is required',
         }),
 });
 
 const loginSchema = Joi.object({
     email: Joi.string().email().required().messages({
-        'string.email': 'Неверный формат email',
-        'any.required': 'Email обязателен',
+        'string.email': 'Invalid email format',
+        'any.required': 'Email is required',
     }),
     password: Joi.string().required().messages({
-        'any.required': 'Пароль обязателен',
+        'any.required': 'Password is required',
     }),
+    _csrf: Joi.string().required().optional(),
 });
 
 module.exports = { registerSchema, loginSchema };

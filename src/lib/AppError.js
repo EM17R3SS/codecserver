@@ -10,19 +10,19 @@ class ApiError extends Error {
         return new ApiError(message, 400, errors);
     }
     static unauthorized(message) {
-        return new ApiError(message || 'Требуется авторизация', 401);
+        return new ApiError(message || 'Unauthorized', 401);
     }
     static forbidden(message) {
-        return new ApiError(message || 'Доступ запрещён', 403);
+        return new ApiError(message || 'Forbidden', 403);
     }
     static notFound(message) {
-        return new ApiError(message || 'Не найдено', 404);
+        return new ApiError(message || 'Not Found', 404);
     }
     static tooManyRequests(message) {
-        return new ApiError(message || 'Слишком много запросов', 429);
+        return new ApiError(message || 'Too Many Requests', 429);
     }
     static internal(message) {
-        return new ApiError(message || 'Внутренняя ошибка сервера', 500);
+        return new ApiError(message || 'Internal Server Error', 500);
     }
 }
 

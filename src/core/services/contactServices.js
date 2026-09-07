@@ -25,7 +25,7 @@ class ContactService {
     async getMessageById(id) {
         const message = await contactRepository.findById(id);
         if (!message) {
-            throw ApiError.notFound('Сообщение не найдено');
+            throw ApiError.notFound('Message not found');
         }
         return message;
     }
@@ -33,7 +33,7 @@ class ContactService {
     async markAsRead(id) {
         const message = await contactRepository.findById(id);
         if (!message) {
-            throw ApiError.notFound('Сообщение не найдено');
+            throw ApiError.notFound('Message not found');
         }
 
         return await contactRepository.updateStatus(id, 'read');
@@ -42,7 +42,7 @@ class ContactService {
     async markAsReplied(id) {
         const message = await contactRepository.findById(id);
         if (!message) {
-            throw ApiError.notFound('Сообщение не найдено');
+            throw ApiError.notFound('Message not found');
         }
 
         return await contactRepository.updateStatus(id, 'replied');
@@ -51,7 +51,7 @@ class ContactService {
     async deleteMessage(id) {
         const message = await contactRepository.findById(id);
         if (!message) {
-            throw ApiError.notFound('Сообщение не найдено');
+            throw ApiError.notFound('Message not found');
         }
 
         return await contactRepository.delete(id);
@@ -59,7 +59,7 @@ class ContactService {
 
     async deleteMessages(ids) {
         if (!Array.isArray(ids) || ids.length === 0) {
-            throw ApiError.badRequest('Укажите ID сообщений');
+            throw ApiError.badRequest('Specify message IDs');
         }
 
         return await contactRepository.deleteMany(ids);

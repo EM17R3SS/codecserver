@@ -34,13 +34,13 @@ function verifyCsrfToken(req, res, next) {
     if (!cookieToken || !clientToken) {
         return res.status(403).json({
             success: false,
-            message: 'CSRF-токен не найден.',
+            message: 'CSRF-token not found.',
         });
     }
     if (cookieToken !== clientToken) {
         return res.status(403).json({
             success: false,
-            message: 'Недействительный CSRF-токен.',
+            message: 'Invalid CSRF-token.',
         });
     }
 

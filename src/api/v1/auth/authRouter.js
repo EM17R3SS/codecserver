@@ -1,4 +1,3 @@
-// src/api/v1/auth/authRouter.js
 const express = require('express');
 const router = express.Router();
 const controller = require('./authController');
@@ -8,6 +7,7 @@ const { verifyCsrfToken } = require('../../middlewares/csrf');
 const { authLimiter } = require('../../middlewares/rateLimiter');
 const config = require('../../../config/env');
 const authMiddleware = require('../../middlewares/auth');
+//const controller = require('./authController');
 
 router.post(
     '/register',
@@ -25,6 +25,8 @@ router.post(
     controller.sessionLogin,
 );
 router.get('/session', controller.getSessionInfo);
+router.get('/validate-token', authMiddleware, controller.validateToken);
+
 
 if (config.GOOGLE_CLIENT_ID) {
     router.get('/google', controller.googleAuth);
