@@ -6,7 +6,6 @@ const catchAsync = require('../../../lib/catchAsync');
 const { verifyToken, generateToken } = require('../../../lib/jwt');
 const User = require('../../../core/models/User');
 
-
 const validateToken = catchAsync(async (req, res) => {
     if (req.user) {
         return res.json({
@@ -143,10 +142,19 @@ const getSessionInfo = (req, res) => {
     });
 };
 
-const googleAuth = passport.authenticate('google', {
-    scope: ['profile', 'email'],
-    prompt: 'select_account',
-});
+const googleAuth = (req, res, next) => {
+    if (!config.GOOGLE_CLIENT_ID || !config.GOOGLE_CLIENT_SECRET) {
+        return res.redirect('/login?error=google_disabled');
+    }
+    if(req.isAuthenticated && req.isAuthenticated()) {
+        return res.redirect('/');
+    }
+
+    passport.authenticate('google', {
+        scope: ['profile', 'email'],
+        prompt: 'select_account',
+    })(req, res, next);
+};
 
 
 const googleCallback = (req, res, next) => {
@@ -173,7 +181,13 @@ const googleCallback = (req, res, next) => {
             }
 
             logger.auth(user._id, 'login_google', true);
-            return res.redirect('/');
+            const token = generateToken({
+                id: user._id,
+                email: user.email,
+                role: user.role,
+            });
+            res.cookie('jwt_token', token, { httpOnly: true, secure: config.NODE_ENV === 'production', sameSite: 'lax', maxAge: 1000 * 60 * 60 * 24 * 7 });
+            return res.redirect(`/`);
         });
     })(req, res, next);
 };

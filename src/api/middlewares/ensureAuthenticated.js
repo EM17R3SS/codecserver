@@ -35,7 +35,7 @@ function ensureAuthenticated(req, res, next) {
                 .catch(err => {
                     return res.status(500).json({
                         success: false,
-                        message: 'Database error',
+                        message: 'Database error' + err.message,
                     });
                 });
             return;
@@ -70,6 +70,7 @@ function ensureGuest(req, res, next) {
             jwt.verify(token, config.JWT_SECRET);
             return res.redirect('/');
         } catch (err) {
+            console.error(err);
         }
     }
 

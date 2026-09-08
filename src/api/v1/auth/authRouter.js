@@ -27,8 +27,8 @@ router.post(
 router.get('/session', controller.getSessionInfo);
 router.get('/validate-token', authMiddleware, controller.validateToken);
 
-
-if (config.GOOGLE_CLIENT_ID) {
+const googleEnabled = config.GOOGLE_CLIENT_ID && config.GOOGLE_CLIENT_SECRET;
+if (googleEnabled) {
     router.get('/google', controller.googleAuth);
     router.get('/google/callback', controller.googleCallback);
 }

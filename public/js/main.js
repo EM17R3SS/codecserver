@@ -83,8 +83,40 @@ class UserManager {
                 console.log('Change password form submitted');
                 this.changePassword();
             });
-        } else {
-            console.log('changePasswordForm not found');
+        }
+
+        const closePasswordBtn = document.getElementById('closePasswordButton');
+        if (closePasswordBtn) {
+            closePasswordBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                this.closePasswordModal();
+            });
+        }
+
+        const passwordModal = document.getElementById('changePasswordModal');
+        if (passwordModal) {
+            passwordModal.addEventListener('click', (e) => {
+                if (e.target === passwordModal) {
+                    this.closePasswordModal();
+                }
+            });
+        }
+
+        const editModal = document.getElementById('editUserModal');
+        if (editModal) {
+            editModal.addEventListener('click', (e) => {
+                if (e.target === editModal) {
+                    this.closeEditUserModal();
+                }
+            });
+        }
+
+        const closeEditBtn = document.getElementById('closeEditButton');
+        if (closeEditBtn) {
+            closeEditBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                this.closeEditUserModal();
+            });
         }
 
         window.authManager.addListener(() => {
