@@ -31,6 +31,8 @@ const googleEnabled = config.GOOGLE_CLIENT_ID && config.GOOGLE_CLIENT_SECRET;
 if (googleEnabled) {
     router.get('/google', controller.googleAuth);
     router.get('/google/callback', controller.googleCallback);
+} else {
+    console.log('Google auth is disabled, add GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET to .env');
 }
 
 module.exports = router;

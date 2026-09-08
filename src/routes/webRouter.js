@@ -7,6 +7,8 @@ const {
     ensureRole,
 } = require('../api/middlewares/ensureAuthenticated');
 
+const googleEnabled = process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET;
+
 router.use(generateCsrfToken);
 
 router.get('/', (req, res) => {
@@ -14,6 +16,7 @@ router.get('/', (req, res) => {
         title: 'Home',
         content: 'Welcome to our website',
         user: req.user || null,
+        googleEnabled: googleEnabled,
     });
 });
 
@@ -24,6 +27,7 @@ router.get('/about', (req, res) => {
         experience: '3 years',
         projects: '25+',
         user: req.user || null,
+        googleEnabled: googleEnabled,
     });
 });
 
@@ -33,6 +37,7 @@ router.get('/contact', (req, res) => {
         email: 'info@example.com',
         phone: '+7 (999) 123-45-67',
         user: req.user || null,
+        googleEnabled: googleEnabled,
     });
 });
 
@@ -41,6 +46,7 @@ router.get('/login', (req, res) => {
         title: 'Login',
         csrfToken: res.locals.csrfToken,
         user: null,
+        googleEnabled: googleEnabled,
     });
 });
 
@@ -49,6 +55,7 @@ router.get('/register', (req, res) => {
         title: 'Register',
         csrfToken: res.locals.csrfToken,
         user: null,
+        googleEnabled: googleEnabled,
     });
 });
 
@@ -57,6 +64,7 @@ router.get('/users', ensureAuthenticated, ensureRole('admin'), (req, res) => {
         title: 'Manage Users',
         userCount: 0,
         user: req.user,
+        googleEnabled: googleEnabled,
     });
 });
 
